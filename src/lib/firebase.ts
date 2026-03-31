@@ -1,29 +1,28 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 
-// 1. Tus credenciales reales de Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyChLguIMlaRJ1fl3IaD0x1DcpnACtjNQ2I",
-  authDomain: "kraken-handyman.firebaseapp.com",
-  projectId: "kraken-handyman",
-  storageBucket: "kraken-handyman.firebasestorage.app",
-  messagingSenderId: "289798963894",
-  appId: "1:289798963894:web:0b1b1b348f7a9dc9661c17"
-};
+export { firebaseConfig };
 
-// 2. Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-
-// 3. Exportar los servicios necesarios
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-// 4. Configurar el proveedor de Google (Para que funcione el botón de Login con Google)
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
+// Secondary app for user management (to create users without logging out)
+export const secondaryApp = !getApps().find(a => a.name === 'Secondary') 
+  ? initializeApp(firebaseConfig, 'Secondary') 
+  : getApp('Secondary');
+export const secondaryAuth = getAuth(secondaryApp);
 
-// Prueba de conexión simplificada para la consola
-console.log("Firebase Kraken OS inicializado correctamente");
+// Connection test
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. The client is offline.");
+    }
+  }
+}
+testConnection();
