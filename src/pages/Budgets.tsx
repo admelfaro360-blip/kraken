@@ -32,6 +32,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme } from '../lib/ThemeContext';
+import { formatFirebaseDate } from '../lib/utils';
 
 import { fetchBudgets, deleteBudget as deleteStoredBudget, saveBudget } from '../lib/storage';
 import { generateBudgetPDF } from '../lib/pdfGenerator';
@@ -79,7 +80,7 @@ export default function Budgets() {
           phone: sb.clientPhone || 'N/A',
           address: sb.clientAddress || 'N/A',
           vertical: sb.clientVertical || 'hogar',
-          date: new Date(sb.date),
+          date: new Date(formatFirebaseDate(sb.date)),
           total: Number(sb.total) || 0
         }));
 
@@ -189,7 +190,8 @@ export default function Budgets() {
       const subtotal = budget.subtotal || (safeTotal / 1.23);
       const iva = safeTotal - subtotal;
       
-      const safeDate = budget.date instanceof Date ? budget.date : new Date(budget.date || Date.now());
+      const dateStr = formatFirebaseDate(budget.date);
+      const safeDate = new Date(dateStr);
       const formattedDate = !isNaN(safeDate.getTime()) ? format(safeDate, 'dd/MM/yyyy') : format(new Date(), 'dd/MM/yyyy');
 
       const doc = await generateBudgetPDF({
