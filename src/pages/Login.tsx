@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ShieldCheck, KeyRound, X, Chrome } from 'lucide-react';
 import { auth } from '../lib/firebase';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { toast } from 'sonner';
 
 export default function Login() {
@@ -16,28 +16,26 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
-    const provider = new GoogleAuthProvider();
+    setLoading(true);
+
+    // Truco: Si pones "admin", el sistema lo convierte en tu correo de Firebase
+    const emailToUse = username.toLowerCase() === 'admin' ? 'admin@kraken.com' : username;
+
     try {
-      await signInWithPopup(auth, provider);
+      // Ahora SÍ le preguntamos a Firebase si la contraseña es correcta
+      await signInWithEmailAndPassword(auth, emailToUse, password);
       toast.success('Sesión iniciada correctamente');
       navigate('/');
     } catch (err: any) {
-      console.error('Error logging in with Google:', err);
-      setError('Error al iniciar sesión con Google');
+      console.error('Error logging in:', err);
+      setError('Credenciales incorrectas. Intenta nuevamente.');
       toast.error('Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    // For this app, we prefer Google Login as per requirements
-    setError('Por favor, utiliza el inicio de sesión con Google');
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -73,7 +71,7 @@ export default function Login() {
         {!showChangePassword ? (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Usuario</label>
+              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Usuario o Correo</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
                 <input 
@@ -108,17 +106,10 @@ export default function Login() {
 
             <button 
               type="submit"
-              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98]"
+              disabled={loading}
+              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98] disabled:opacity-70"
             >
-              Entrar al Sistema
-            </button>
-
-            <button 
-              type="button"
-              onClick={() => setShowChangePassword(true)}
-              className="w-full text-center text-xs font-bold text-neutral-400 hover:text-kraken-orange transition-colors"
-            >
-              ¿Olvidaste tu contraseña? Cambiar contraseña
+              {loading ? 'Entrando...' : 'Entrar al Sistema'}
             </button>
           </form>
         ) : (
