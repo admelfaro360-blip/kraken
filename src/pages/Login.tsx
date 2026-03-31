@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, KeyRound, X, Chrome } from 'lucide-react';
+import { Lock, User, KeyRound, X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -86,14 +86,14 @@ export default function Login() {
 
         {!showChangePassword ? (
           <>
-            {/* BOTÓN DE GOOGLE */}
+            {/* BOTÓN DE GOOGLE (Sin íconos externos para evitar errores) */}
             <button 
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
               className="w-full py-4 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-white border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all flex items-center justify-center gap-3 shadow-sm disabled:opacity-70 active:scale-[0.98]"
             >
-              <Chrome size={20} className="text-kraken-orange" />
+              <span className="font-black text-xl text-kraken-orange">G</span>
               Ingresar con Google
             </button>
 
