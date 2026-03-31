@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, KeyRound, X } from 'lucide-react';
+import { Lock, User, KeyRound, X, Chrome } from 'lucide-react';
 import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { toast } from 'sonner';
 
 export default function Login() {
@@ -16,22 +16,39 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Función para entrar con Google
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      toast.success('Sesión iniciada con Google');
+      navigate('/');
+    } catch (err: any) {
+      console.error('Error con Google:', err);
+      setError('No se pudo iniciar sesión con Google.');
+      toast.error('Error de autenticación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para entrar con Usuario y Contraseña
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Truco: Si pones "admin", el sistema lo convierte en tu correo de Firebase
     const emailToUse = username.toLowerCase() === 'admin' ? 'admin@kraken.com' : username;
 
     try {
-      // Ahora SÍ le preguntamos a Firebase si la contraseña es correcta
       await signInWithEmailAndPassword(auth, emailToUse, password);
       toast.success('Sesión iniciada correctamente');
       navigate('/');
     } catch (err: any) {
-      console.error('Error logging in:', err);
-      setError('Credenciales incorrectas. Intenta nuevamente.');
+      console.error('Error con email:', err);
+      setError('Credenciales incorrectas. Revisa tu usuario y contraseña.');
       toast.error('Error al iniciar sesión');
     } finally {
       setLoading(false);
@@ -55,8 +72,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-[40px] shadow-2xl border border-neutral-100 dark:border-neutral-800 p-10 space-y-8">
-        <div className="text-center space-y-2">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-[40px] shadow-2xl border border-neutral-100 dark:border-neutral-800 p-10 space-y-6">
+        <div className="text-center space-y-2 mb-6">
           <img 
             src="/logo.png" 
             alt="Logo" 
@@ -68,49 +85,67 @@ export default function Login() {
         </div>
 
         {!showChangePassword ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Usuario o Correo</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                  placeholder="admin"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Contraseña</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-kraken-orange text-sm font-bold text-center">{error}</p>
-            )}
-
+          <>
+            {/* BOTÓN DE GOOGLE */}
             <button 
-              type="submit"
+              type="button"
+              onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98] disabled:opacity-70"
+              className="w-full py-4 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-white border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all flex items-center justify-center gap-3 shadow-sm disabled:opacity-70 active:scale-[0.98]"
             >
-              {loading ? 'Entrando...' : 'Entrar al Sistema'}
+              <Chrome size={20} className="text-kraken-orange" />
+              Ingresar con Google
             </button>
-          </form>
+
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+              <span className="flex-shrink-0 mx-4 text-neutral-400 text-[10px] font-bold uppercase tracking-widest">O usa tu cuenta</span>
+              <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            </div>
+
+            {/* FORMULARIO DE EMAIL Y CONTRASEÑA */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    placeholder="Usuario o Correo"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-kraken-orange text-sm font-bold text-center bg-red-50 p-3 rounded-xl">{error}</p>
+              )}
+
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98] disabled:opacity-70"
+              >
+                {loading ? 'Cargando...' : 'Entrar al Sistema'}
+              </button>
+            </form>
+          </>
         ) : (
           <form onSubmit={handleChangePassword} className="space-y-6">
             <div className="flex items-center justify-between mb-2">
@@ -149,10 +184,6 @@ export default function Login() {
                 />
               </div>
             </div>
-
-            {error && (
-              <p className="text-kraken-orange text-sm font-bold text-center">{error}</p>
-            )}
 
             {changeSuccess && (
               <p className="text-green-600 text-sm font-bold text-center">{changeSuccess}</p>
