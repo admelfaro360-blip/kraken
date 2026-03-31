@@ -40,14 +40,16 @@ export default function Login() {
     setLoading(true);
 
     try {
+      console.log('Attempting login for:', username);
       // Try Firebase Auth first
       try {
         await signInWithEmailAndPassword(auth, username, password);
+        console.log('Firebase Auth success');
         toast.success('Sesión iniciada correctamente');
         navigate('/');
         return;
       } catch (authErr: any) {
-        console.log('Firebase Auth failed, trying manual check...', authErr.code);
+        console.log('Firebase Auth failed:', authErr.code);
         // If it's not a "user not found" or "invalid email", it might be a real error
         if (authErr.code !== 'auth/user-not-found' && authErr.code !== 'auth/invalid-email' && authErr.code !== 'auth/invalid-credential') {
           throw authErr;
@@ -55,13 +57,16 @@ export default function Login() {
       }
 
       // Manual check for users created before this update or with username
+      console.log('Trying manual check...');
       const users = await fetchUsers();
+      console.log('Fetched users:', users.length);
       const user = users.find(u => 
         (u.username === username || u.email === username) && 
         u.password === password
       );
 
       if (user) {
+        console.log('Manual check success, user role:', user.role);
         // Store session in localStorage for App.tsx to pick up
         localStorage.setItem('kraken_user', JSON.stringify({
           uid: user.id,
@@ -74,6 +79,7 @@ export default function Login() {
         toast.success('Sesión iniciada correctamente');
         window.location.href = '/';
       } else {
+        console.log('Manual check failed: user not found or password mismatch');
         setError('Usuario o contraseña incorrectos');
         toast.error('Error al iniciar sesión');
       }
@@ -131,7 +137,7 @@ export default function Login() {
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                  className="kraken-input pl-12"
                   placeholder="admin@ejemplo.com"
                   required
                 />
@@ -146,7 +152,7 @@ export default function Login() {
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                  className="kraken-input pl-12"
                   placeholder="••••••••"
                   required
                 />
@@ -157,12 +163,34 @@ export default function Login() {
               <p className="text-kraken-orange text-sm font-bold text-center">{error}</p>
             )}
 
-            <button 
-              type="submit"
-              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98]"
-            >
-              Entrar al Sistema
-            </button>
+            <div className="space-y-4">
+              <button 
+                type="submit"
+                disabled={loading}
+                className="kraken-btn w-full"
+              >
+                {loading ? 'Iniciando...' : 'Entrar al Sistema'}
+              </button>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-neutral-900 px-2 text-neutral-400 font-bold">O continuar con</span>
+                </div>
+              </div>
+
+              <button 
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="kraken-btn-secondary w-full flex items-center justify-center gap-3"
+              >
+                <Chrome size={20} className="text-kraken-orange" />
+                <span className="font-bold">Google Account</span>
+              </button>
+            </div>
 
             <button 
               type="button"
@@ -189,7 +217,7 @@ export default function Login() {
                   type="password" 
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                  className="kraken-input pl-12"
                   placeholder="••••••••"
                   required
                 />
@@ -204,7 +232,7 @@ export default function Login() {
                   type="password" 
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                  className="kraken-input pl-12"
                   placeholder="••••••••"
                   required
                 />
@@ -221,7 +249,7 @@ export default function Login() {
 
             <button 
               type="submit"
-              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98]"
+              className="kraken-btn w-full"
             >
               Actualizar Contraseña
             </button>
