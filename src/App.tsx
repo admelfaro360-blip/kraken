@@ -22,8 +22,23 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Check for local user session first
+    const localUser = localStorage.getItem('kraken_user');
+    if (localUser) {
+      try {
+        setUser(JSON.parse(localUser));
+      } catch (e) {
+        console.error('Error parsing local user:', e);
+        localStorage.removeItem('kraken_user');
+      }
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+      } else if (!localStorage.getItem('kraken_user')) {
+        setUser(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -32,6 +47,8 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('kraken_user');
+      setUser(null);
     } catch (error) {
       console.error('Error logging out:', error);
     }
