@@ -32,6 +32,7 @@ import {
 import { es } from 'date-fns/locale';
 import { fetchBudgets, fetchWorkOrders } from '../lib/storage';
 import { Budget, WorkOrder } from '../types';
+import { formatFirebaseDate } from '../lib/utils';
 import { generateWeeklyAgendaPDF, WeeklyAgendaPDFData } from '../lib/pdfGenerator';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -41,7 +42,8 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // Helper to parse YYYY-MM-DD as local date to avoid timezone issues
-const parseLocalDate = (dateStr: string) => {
+const parseLocalDate = (rawDate: any) => {
+  const dateStr = formatFirebaseDate(rawDate).split('T')[0];
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
