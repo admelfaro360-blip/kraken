@@ -1,40 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, KeyRound, X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { toast } from 'sonner';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changeSuccess, setChangeSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Función para entrar con Google
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast.success('Sesión iniciada con Google');
       navigate('/');
-    } catch (err: any) {
-      console.error('Error con Google:', err);
-      setError('No se pudo iniciar sesión con Google.');
-      toast.error('Error de autenticación');
+    } catch (err) {
+      setError('Error al conectar con Google.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para entrar con Usuario y Contraseña
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -44,163 +33,66 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, emailToUse, password);
-      toast.success('Sesión iniciada correctamente');
       navigate('/');
-    } catch (err: any) {
-      console.error('Error con email:', err);
+    } catch (err) {
       setError('Credenciales incorrectas. Revisa tu usuario y contraseña.');
-      toast.error('Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-    setChangeSuccess('Contraseña actualizada correctamente');
-    setTimeout(() => {
-      setShowChangePassword(false);
-      setChangeSuccess('');
-      setNewPassword('');
-      setConfirmPassword('');
-    }, 2000);
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-[40px] shadow-2xl border border-neutral-100 dark:border-neutral-800 p-10 space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-neutral-900 p-6">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-10 space-y-6">
         <div className="text-center space-y-2 mb-6">
-          <img 
-            src="/logo.png" 
-            alt="Logo" 
-            className="h-24 w-auto object-contain mx-auto mb-4"
-            referrerPolicy="no-referrer"
+          <h1 className="text-3xl font-black tracking-tighter text-neutral-900 uppercase">Kraken OS</h1>
+          <p className="text-neutral-500 font-medium">Inicia sesión para gestionar tu negocio</p>
+        </div>
+
+        <button 
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full py-4 bg-white text-neutral-800 border-2 border-neutral-200 rounded-2xl font-bold hover:bg-neutral-50 transition-all flex items-center justify-center gap-3"
+        >
+          <span className="text-red-600 font-black text-xl">G</span>
+          Ingresar con Google
+        </button>
+
+        <div className="relative flex items-center py-4">
+          <div className="flex-grow border-t border-neutral-200"></div>
+          <span className="mx-4 text-neutral-400 text-[10px] font-bold uppercase">O usa tu cuenta</span>
+          <div className="flex-grow border-t border-neutral-200"></div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="text" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full p-4 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold outline-none focus:border-red-600"
+            placeholder="Usuario o Correo"
+            required
           />
-          <h1 className="text-3xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase">Kraken OS</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 font-medium">Inicia sesión para gestionar tu negocio</p>
-        </div>
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-4 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold outline-none focus:border-red-600"
+            placeholder="••••••••"
+            required
+          />
 
-        {!showChangePassword ? (
-          <>
-            {/* BOTÓN DE GOOGLE (Sin íconos externos para evitar errores) */}
-            <button 
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full py-4 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-white border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all flex items-center justify-center gap-3 shadow-sm disabled:opacity-70 active:scale-[0.98]"
-            >
-              <span className="font-black text-xl text-kraken-orange">G</span>
-              Ingresar con Google
-            </button>
+          {error && <p className="text-red-600 text-sm font-bold text-center bg-red-50 p-2 rounded">{error}</p>}
 
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-              <span className="flex-shrink-0 mx-4 text-neutral-400 text-[10px] font-bold uppercase tracking-widest">O usa tu cuenta</span>
-              <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            </div>
-
-            {/* FORMULARIO DE EMAIL Y CONTRASEÑA */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                  <input 
-                    type="text" 
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                    placeholder="Usuario o Correo"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                  <input 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-kraken-orange text-sm font-bold text-center bg-red-50 p-3 rounded-xl">{error}</p>
-              )}
-
-              <button 
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98] disabled:opacity-70"
-              >
-                {loading ? 'Cargando...' : 'Entrar al Sistema'}
-              </button>
-            </form>
-          </>
-        ) : (
-          <form onSubmit={handleChangePassword} className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold dark:text-white">Cambiar Contraseña</h2>
-              <button type="button" onClick={() => setShowChangePassword(false)} className="text-neutral-400 hover:text-neutral-600">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Nueva Contraseña</label>
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Confirmar Contraseña</label>
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            {changeSuccess && (
-              <p className="text-green-600 text-sm font-bold text-center">{changeSuccess}</p>
-            )}
-
-            <button 
-              type="submit"
-              className="w-full py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-[0.98]"
-            >
-              Actualizar Contraseña
-            </button>
-          </form>
-        )}
-
-        <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center">
-          <p className="text-xs text-neutral-400 font-medium">Kraken Handyman OS v1.0 • 2026</p>
-        </div>
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all"
+          >
+            {loading ? 'Cargando...' : 'Entrar al Sistema'}
+          </button>
+        </form>
       </div>
     </div>
   );
