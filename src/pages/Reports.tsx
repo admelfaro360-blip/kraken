@@ -30,6 +30,7 @@ import {
 } from 'recharts';
 import { Expense } from '../types';
 import { useTheme } from '../lib/ThemeContext';
+import { formatFirebaseDate } from '../lib/utils';
 import { getStoredExpenses, resetAllData } from '../lib/storage';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
@@ -38,6 +39,7 @@ const COLORS = ['#FF4D00', '#2B2D42', '#8D99AE', '#FF7033', '#EDF2F4'];
 export default function Reports() {
   const { isDarkMode } = useTheme();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const [period, setPeriod] = useState<'mensual' | 'anual'>('mensual');
   const [selectedMonth, setSelectedMonth] = useState('Marzo');
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -45,6 +47,7 @@ export default function Reports() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const loadExpenses = async () => {
       const stored = await getStoredExpenses();
       setExpenses(stored);
@@ -106,7 +109,8 @@ export default function Reports() {
     
     return expenses.filter(item => {
       if (!item.date) return false;
-      return isWithinInterval(parseISO(item.date), { start, end });
+      const dateStr = formatFirebaseDate(item.date);
+      return isWithinInterval(parseISO(dateStr), { start, end });
     });
   }, [expenses, period, selectedMonth, selectedYear]);
 
@@ -306,21 +310,23 @@ export default function Reports() {
             </div>
           </div>
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartType === 'category' ? expensesByCategory : timeData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#333' : '#f0f0f0'} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: isDarkMode ? '#999' : '#666', fontSize: 10, fontWeight: 700 }} 
-                  tickFormatter={(val) => val.replace('_', ' ').toUpperCase()}
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#999' : '#666', fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: isDarkMode ? '#262626' : '#f8f8f8' }} />
-                <Bar dataKey={chartType === 'category' ? 'value' : 'value'} fill="#FF4D00" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartType === 'category' ? expensesByCategory : timeData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#333' : '#f0f0f0'} />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: isDarkMode ? '#999' : '#666', fontSize: 10, fontWeight: 700 }} 
+                    tickFormatter={(val) => val.replace('_', ' ').toUpperCase()}
+                  />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#999' : '#666', fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: isDarkMode ? '#262626' : '#f8f8f8' }} />
+                  <Bar dataKey={chartType === 'category' ? 'value' : 'value'} fill="#FF4D00" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
