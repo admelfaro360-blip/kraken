@@ -290,6 +290,19 @@ export const deleteUser = async (id: string) => {
   }
 };
 
+export const getUserById = async (id: string): Promise<any | null> => {
+  try {
+    const docSnap = await getDoc(doc(db, USERS_COLLECTION, id));
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, USERS_COLLECTION);
+    return null;
+  }
+};
+
 export const resetAllData = async () => {
   // Resetting Firestore data is more complex than localStorage.
   // For simplicity, we'll just reload the page for now.
