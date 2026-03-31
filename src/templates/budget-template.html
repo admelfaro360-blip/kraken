@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plantilla de Presupuesto</title>
+    <style>
+        :root {
+            --primary-color: #d10429; /* Rojo Kraken */
+            --text-main: #121212;
+            --text-muted: #787878;
+            --line-color: #e5e5e5;
+            --bg-light: #f9f9f9;
+            --bg-gray: #b4b4b4;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            line-height: 1.5;
+            background-color: #f0f0f0;
+        }
+
+        /* Tamaño A4 */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 10mm auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media print {
+            body { background: none; }
+            .page { margin: 0; box-shadow: none; width: 100%; height: 100%; }
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            opacity: 0.05;
+            width: 80%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            padding: 0;
+        }
+
+        .page-padding {
+            padding: 10mm 15mm;
+        }
+
+        /* 1. Encabezado */
+        .header {
+            background-color: #0a0a0a;
+            padding: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: var(--primary-color);
+        }
+
+        .logo {
+            max-width: 220px;
+            height: auto;
+        }
+
+        .main-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 800;
+            margin: 20px 0;
+            color: var(--text-main);
+        }
+
+        /* 2. Información del documento */
+        .doc-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        hr.divider {
+            border: none;
+            border-top: 2px solid #333;
+            margin: 0 0 20px 0;
+        }
+
+        /* 3. Datos del Cliente (Gray Box) */
+        .client-box {
+            background-color: var(--bg-gray);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .client-box div {
+            margin-bottom: 5px;
+        }
+
+        .client-label {
+            font-weight: 400;
+            display: inline-block;
+            width: 80px;
+        }
+
+        .client-value {
+            font-weight: 700;
+        }
+
+        /* 4. Secciones de Contenido */
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        .details-list {
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        /* 6. Totales */
+        .totals-container {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .total-label {
+            text-align: right;
+            padding-right: 40px;
+        }
+
+        .total-value {
+            width: 100px;
+            text-align: right;
+            font-weight: 400;
+        }
+
+        .final-total {
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        /* 7. Pie de Página */
+        .footer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background-color: var(--primary-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .footer-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page">
+        <img src="https://storage.googleapis.com/test-session-bucket/session-images/1742994917542-0.png" class="watermark" alt="Watermark">
+        
+        <div class="content">
+            <!-- 1. Encabezado -->
+            <div class="header">
+                <img src="https://storage.googleapis.com/test-session-bucket/session-images/1742994917542-0.png" alt="Kraken Logo" class="logo">
+            </div>
+
+            <div class="page-padding">
+                <!-- 2. Información del documento -->
+                <div class="doc-info">
+                    <div>{{numero_presupuesto}}</div>
+                    <div>{{fecha}}</div>
+                </div>
+
+                <div class="main-title">Proposta de manutenção e reparações.</div>
+                
+                <hr class="divider">
+
+                <!-- 3. Datos del Cliente -->
+                <div class="client-box">
+                    <div><span class="client-label">Cliente:</span> <span class="client-value">{{cliente_nombre}}</span></div>
+                    <div><span class="client-label">Telemóvel:</span> <span class="client-value">{{cliente_telefono}}</span></div>
+                    <div><span class="client-label">Morada :</span> <span class="client-value">{{cliente_direccion}}</span></div>
+                </div>
+
+                <!-- 4. Descripción -->
+                <div class="section-title">Descrição:</div>
+                <div class="details-list">
+                    {{descripcion}}
+                    <!-- Fallback if no description -->
+                    {{^descripcion}}
+                    Trabajos de mantenimiento integral según lo acordado.
+                    {{/descripcion}}
+                </div>
+
+                <!-- 5. Materiales -->
+                <div class="section-title">Materiais</div>
+                <div class="details-list">
+                    {{#each lista_materiales}}
+                    • {{this}}<br>
+                    {{/each}}
+                    {{^lista_materiales}}
+                    Materiales incluidos en el presupuesto.
+                    {{/lista_materiales}}
+                </div>
+
+                <!-- 6. Totales -->
+                <div class="totals-container">
+                    <div class="total-row">
+                        <div class="total-label">Sub total Materiais</div>
+                        <div class="total-value">€ {{monto_subtotal}}</div>
+                    </div>
+                    <div class="total-row final-total">
+                        <div class="total-label">TOTAL FINAL +IVA</div>
+                        <div class="total-value">€ {{monto_total}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Pie de Página -->
+        <div class="footer-bar">
+            <div class="footer-item">
+                <span>📞 967 873 913</span>
+            </div>
+            <div class="footer-item">
+                <span>somos confianza, somos Kraken</span>
+            </div>
+            <div class="footer-item">
+                <span>📸 @kraken_pt</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
+</body>
+</html>

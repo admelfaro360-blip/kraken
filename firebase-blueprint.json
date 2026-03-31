@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Budget": {
+      "title": "Budget",
+      "description": "Presupuesto de servicios",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "total": { "type": "number" },
+        "date": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "clientId", "total", "date", "status"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Cliente del negocio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "vertical": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["id", "name", "vertical", "address", "phone"]
+    },
+    "WorkOrder": {
+      "title": "WorkOrder",
+      "description": "Orden de trabajo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "budgetId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "budgetId", "clientId", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Registro de cobro",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "budgetId": { "type": "string" },
+        "amount": { "type": "number" }
+      },
+      "required": ["id", "budgetId", "amount"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Gasto del negocio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" }
+      },
+      "required": ["id", "description", "amount"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Usuario del sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "role"]
+    }
+  },
+  "firestore": {
+    "budgets": {
+      "schema": "Budget",
+      "description": "Colección de presupuestos"
+    },
+    "clients": {
+      "schema": "Client",
+      "description": "Colección de clientes"
+    },
+    "work_orders": {
+      "schema": "WorkOrder",
+      "description": "Colección de órdenes de trabajo"
+    },
+    "payments": {
+      "schema": "Payment",
+      "description": "Colección de cobros"
+    },
+    "expenses": {
+      "schema": "Expense",
+      "description": "Colección de gastos"
+    },
+    "config": {
+      "schema": "object",
+      "description": "Configuración global"
+    },
+    "users": {
+      "schema": "User",
+      "description": "Colección de usuarios"
+    }
+  }
+}

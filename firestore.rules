@@ -1,0 +1,122 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// This security rules file assumes the following data structures:
+//
+// Collection: budgets
+// Fields:
+//   - id: string (required)
+//   - clientId: string (required)
+//   - clientName: string (required)
+//   - total: number (required)
+//   - date: string (required)
+//   - status: string (required)
+//   - items: list (required)
+//
+// Collection: clients
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - vertical: string (required)
+//   - address: string (required)
+//   - phone: string (required)
+//   - email: string (optional)
+//
+// Collection: work_orders
+// Fields:
+//   - id: string (required)
+//   - budgetId: string (required)
+//   - clientId: string (required)
+//   - status: string (required)
+//
+// Collection: payments
+// Fields:
+//   - id: string (required)
+//   - budgetId: string (required)
+//   - amount: number (required)
+//
+// Collection: expenses
+// Fields:
+//   - id: string (required)
+//   - description: string (required)
+//   - amount: number (required)
+//
+// Collection: config
+// Document ID: business
+// Fields:
+//   - fixedCosts: list
+//   - variableCosts: list
+//
+// Collection: users
+// Fields:
+//   - id: string (required)
+//   - role: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (request.auth.token.email == "admelfaro360@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Allow admins to do anything
+    match /{path=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /budgets/{budgetId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /clients/{clientId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /work_orders/{orderId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /payments/{paymentId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /config/business {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow update: if isAdmin();
+    }
+  }
+}
