@@ -1,99 +1,126 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth, googleProvider } from '../lib/firebase';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
-    const provider = new GoogleAuthProvider();
+    setLoading(true);
+
     try {
-      await signInWithPopup(auth, provider);
-      navigate('/');
-    } catch (err) {
-      setError('Error al conectar con Google.');
+      // REGLA: Si el usuario escribe "admin", lo convertimos automáticamente
+      const finalEmail = email.toLowerCase().trim() === 'admin' 
+        ? 'admin@kraken.com' 
+        : email.trim();
+
+      await signInWithEmailAndPassword(auth, finalEmail, password);
+      navigate('/'); // Si sale bien, va al Dashboard
+    } catch (err: any) {
+      console.error(err);
+      setError('Credenciales incorrectas o error de conexión');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
-
-    const emailToUse = username.toLowerCase() === 'admin' ? 'admin@kraken.com' : username;
-
     try {
-      await signInWithEmailAndPassword(auth, emailToUse, password);
+      await signInWithPopup(auth, googleProvider);
       navigate('/');
-    } catch (err) {
-      setError('Credenciales incorrectas. Revisa tu usuario y contraseña.');
+    } catch (err: any) {
+      console.error(err);
+      setError('Error al iniciar con Google');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-900 p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-10 space-y-6">
-        <div className="text-center space-y-2 mb-6">
-          <h1 className="text-3xl font-black tracking-tighter text-neutral-900 uppercase">Kraken OS</h1>
-          <p className="text-neutral-500 font-medium">Inicia sesión para gestionar tu negocio</p>
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700"
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">KRAKEN OS</h1>
+          <p className="text-slate-400">Gestión de Presupuestos y Clientes</p>
         </div>
 
-        <button 
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full py-4 bg-white text-neutral-800 border-2 border-neutral-200 rounded-2xl font-bold hover:bg-neutral-50 transition-all flex items-center justify-center gap-3"
-        >
-          <span className="text-red-600 font-black text-xl">G</span>
-          Ingresar con Google
-        </button>
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-3 text-red-500 text-sm">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
 
-        <div className="relative flex items-center py-4">
-          <div className="flex-grow border-t border-neutral-200"></div>
-          <span className="mx-4 text-neutral-400 text-[10px] font-bold uppercase">O usa tu cuenta</span>
-          <div className="flex-grow border-t border-neutral-200"></div>
-        </div>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Usuario o Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+              <input
+                type="text"
+                required
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg py-3 px-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                placeholder="Escribe 'admin' o tu email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input 
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-4 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold outline-none focus:border-red-600"
-            placeholder="Usuario o Correo"
-            required
-          />
-          <input 
-            type="password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-4 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold outline-none focus:border-red-600"
-            placeholder="••••••••"
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+              <input
+                type="password"
+                required
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg py-3 px-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
 
-          {error && <p className="text-red-600 text-sm font-bold text-center bg-red-50 p-2 rounded">{error}</p>}
-
-          <button 
+          <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? 'Cargando...' : 'Entrar al Sistema'}
+            {loading ? 'Cargando...' : <><LogIn size={20} /> Iniciar Sesión</>}
           </button>
         </form>
-      </div>
+
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
+          <div className="relative flex justify-center text-sm"><span className="px-2 bg-slate-800 text-slate-500 italic">O también</span></div>
+        </div>
+
+        {/* BOTÓN DE GOOGLE CORREGIDO (Sin icono Chrome para evitar errores en Vercel) */}
+        <button
+          onClick={handleGoogleLogin}
+          type="button"
+          className="w-full bg-white hover:bg-gray-100 text-slate-900 font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-3"
+        >
+          <span className="w-6 h-6 flex items-center justify-center bg-blue-600 text-white rounded-full text-xs font-black">G</span>
+          Continuar con Google
+        </button>
+      </motion.div>
     </div>
   );
 }
