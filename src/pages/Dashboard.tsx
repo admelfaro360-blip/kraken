@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../lib/ThemeContext';
 import { Link } from 'react-router-dom';
+import { formatFirebaseDate } from '../lib/utils';
 import { 
   getStoredBudgets, 
   getStoredClients, 
@@ -97,6 +98,7 @@ export default function Dashboard() {
   const [isAccumulated, setIsAccumulated] = React.useState(false);
   const [isCustomizing, setIsCustomizing] = React.useState(false);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
   
   // Real data state
   const [budgets, setBudgets] = React.useState<any[]>([]);
@@ -106,6 +108,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = React.useState<any[]>([]);
 
   React.useEffect(() => {
+    setIsMounted(true);
     const loadData = async () => {
       try {
         const [b, c, p, wo, e] = await Promise.all([
@@ -187,9 +190,10 @@ export default function Dashboard() {
     const end = endOfMonth(new Date(parseInt(year), monthIdx));
     
     return items.filter(item => {
-      const date = item.date || item.startDate || item.createdAt;
-      if (!date) return false;
-      return isWithinInterval(parseISO(date), { start, end });
+      const rawDate = item.date || item.startDate || item.createdAt;
+      if (!rawDate) return false;
+      const dateStr = formatFirebaseDate(rawDate);
+      return isWithinInterval(parseISO(dateStr), { start, end });
     });
   };
 
@@ -234,13 +238,17 @@ export default function Dashboard() {
       const monthEnd = endOfMonth(new Date(parseInt(year), idx));
       
       const mBudgets = budgets.filter(b => {
-        const date = b.date || b.startDate || b.createdAt;
-        return date && isWithinInterval(parseISO(date), { start: monthStart, end: monthEnd });
+        const rawDate = b.date || b.startDate || b.createdAt;
+        if (!rawDate) return false;
+        const dateStr = formatFirebaseDate(rawDate);
+        return isWithinInterval(parseISO(dateStr), { start: monthStart, end: monthEnd });
       });
 
       const mPayments = payments.filter(p => {
-        const date = p.date || p.createdAt;
-        return date && isWithinInterval(parseISO(date), { start: monthStart, end: monthEnd });
+        const rawDate = p.date || p.createdAt;
+        if (!rawDate) return false;
+        const dateStr = formatFirebaseDate(rawDate);
+        return isWithinInterval(parseISO(dateStr), { start: monthStart, end: monthEnd });
       });
 
       const total = mBudgets.reduce((acc, b) => acc + (b.total || 0), 0);
@@ -264,8 +272,17 @@ export default function Dashboard() {
     { name: 'Finalizados', value: filteredBudgets.filter(b => b.status === 'finalizado').length },
   ];
 
-  const recentOrders = [...workOrders].sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()).slice(0, 3);
-  const upcomingPayments = [...payments].filter(p => p.status === 'pendiente').sort((a, b) => new Date(a.dueDate || '').getTime() - new Date(b.dueDate || '').getTime()).slice(0, 3);
+  const recentOrders = [...workOrders].sort((a, b) => {
+    const dateA = new Date(formatFirebaseDate(a.createdAt || '')).getTime();
+    const dateB = new Date(formatFirebaseDate(b.createdAt || '')).getTime();
+    return dateB - dateA;
+  }).slice(0, 3);
+  
+  const upcomingPayments = [...payments].filter(p => p.status === 'pendiente').sort((a, b) => {
+    const dateA = new Date(formatFirebaseDate(a.dueDate || '')).getTime();
+    const dateB = new Date(formatFirebaseDate(b.dueDate || '')).getTime();
+    return dateA - dateB;
+  }).slice(0, 3);
 
   const getMetricTrend = (id: string) => {
     switch (id) {
@@ -414,25 +431,27 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#333' : '#f0f0f0'} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#999', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#999', fontSize: 12 }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      borderRadius: '16px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                      backgroundColor: isDarkMode ? '#171717' : '#fff',
-                      color: isDarkMode ? '#fff' : '#000'
-                    }}
-                    itemStyle={{ color: isDarkMode ? '#fff' : '#000' }}
-                    cursor={{ fill: isDarkMode ? '#262626' : '#f8f8f8' }}
-                  />
-                  <Bar dataKey={barChartVariable} fill="#FF4D00" radius={[4, 4, 0, 0]} barSize={30} />
-                </BarChart>
-              </ResponsiveContainer>
+              {isMounted && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#333' : '#f0f0f0'} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#999', fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#999', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        borderRadius: '16px', 
+                        border: 'none', 
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                        backgroundColor: isDarkMode ? '#171717' : '#fff',
+                        color: isDarkMode ? '#fff' : '#000'
+                      }}
+                      itemStyle={{ color: isDarkMode ? '#fff' : '#000' }}
+                      cursor={{ fill: isDarkMode ? '#262626' : '#f8f8f8' }}
+                    />
+                    <Bar dataKey={barChartVariable} fill="#FF4D00" radius={[4, 4, 0, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         )}
@@ -451,32 +470,34 @@ export default function Dashboard() {
               </select>
             </div>
             <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartVariable === 'vertical' ? pieData : statusPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {(pieChartVariable === 'vertical' ? pieData : statusPieData).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 1 && isDarkMode ? '#fff' : COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      borderRadius: '16px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                      backgroundColor: isDarkMode ? '#171717' : '#fff',
-                      color: isDarkMode ? '#fff' : '#000'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {isMounted && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartVariable === 'vertical' ? pieData : statusPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {(pieChartVariable === 'vertical' ? pieData : statusPieData).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === 1 && isDarkMode ? '#fff' : COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        borderRadius: '16px', 
+                        border: 'none', 
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                        backgroundColor: isDarkMode ? '#171717' : '#fff',
+                        color: isDarkMode ? '#fff' : '#000'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
             <div className="space-y-4 mt-6">
               {(pieChartVariable === 'vertical' ? pieData : statusPieData).map((item, i) => (
@@ -532,7 +553,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold dark:text-white">{payment.clientName}</h4>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{payment.budgetId} • Vence {payment.dueDate}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{payment.budgetId} • Vence {format(new Date(formatFirebaseDate(payment.dueDate)), 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
                   <div className="text-right">
