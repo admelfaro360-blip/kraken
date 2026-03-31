@@ -16,6 +16,7 @@ import { Toaster } from 'sonner';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import ErrorBoundary from './components/ErrorBoundary';
+import { getUserById } from './lib/storage';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -26,16 +27,31 @@ export default function App() {
     const localUser = localStorage.getItem('kraken_user');
     if (localUser) {
       try {
-        setUser(JSON.parse(localUser));
+        const parsed = JSON.parse(localUser);
+        setUser(parsed);
+        // If we have a local user, we're already "ready" to show the UI
+        setLoading(false);
       } catch (e) {
         console.error('Error parsing local user:', e);
         localStorage.removeItem('kraken_user');
       }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
+        // Fetch additional user data from Firestore (like role)
+        try {
+          const userData = await getUserById(firebaseUser.uid);
+          if (userData) {
+            setUser({ ...firebaseUser, ...userData });
+          } else {
+            // If no Firestore data, just use the Firebase Auth user
+            setUser(firebaseUser);
+          }
+        } catch (err) {
+          console.error('Error fetching user data from Firestore:', err);
+          setUser(firebaseUser);
+        }
       } else if (!localStorage.getItem('kraken_user')) {
         setUser(null);
       }
