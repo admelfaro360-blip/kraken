@@ -309,7 +309,7 @@ export default function Payments() {
                       step="0.01"
                       placeholder="0.00"
                       value={paymentToEdit.amount || ''}
-                      onChange={(e) => setPaymentToEdit({ ...paymentToEdit, amount: e.target.value })}
+                      onChange={(e) => setPaymentToEdit({ ...paymentToEdit, amount: Number(e.target.value) })}
                       className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
                     />
                   </div>
