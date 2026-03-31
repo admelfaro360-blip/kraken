@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, ShieldCheck, KeyRound, X, Chrome } from 'lucide-react';
+import { Lock, User, ShieldCheck, KeyRound, X, Chrome, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
 import { fetchUsers } from '../lib/storage';
@@ -41,27 +42,33 @@ export default function Login() {
 
     try {
       console.log('Attempting login for:', username);
+      
       // Try Firebase Auth first
       try {
-        await signInWithEmailAndPassword(auth, username, password);
-        console.log('Firebase Auth success');
-        toast.success('Sesión iniciada correctamente');
-        navigate('/');
-        return;
+        // If it's an email, try it directly
+        if (username.includes('@')) {
+          await signInWithEmailAndPassword(auth, username, password);
+          console.log('Firebase Auth success');
+          toast.success('Sesión iniciada correctamente');
+          navigate('/');
+          return;
+        }
       } catch (authErr: any) {
         console.log('Firebase Auth failed:', authErr.code);
-        // If it's not a "user not found" or "invalid email", it might be a real error
-        if (authErr.code !== 'auth/user-not-found' && authErr.code !== 'auth/invalid-email' && authErr.code !== 'auth/invalid-credential') {
-          throw authErr;
+        // If it's a wrong password, we should stop here
+        if (authErr.code === 'auth/wrong-password' || authErr.code === 'auth/invalid-credential') {
+          // But wait, maybe the manual check has a different password?
+          // Let's continue to manual check just in case
         }
       }
 
       // Manual check for users created before this update or with username
       console.log('Trying manual check...');
       const users = await fetchUsers();
-      console.log('Fetched users:', users.length);
+      console.log('Fetched users count:', users.length);
+      
       const user = users.find(u => 
-        (u.username === username || u.email === username) && 
+        (u.username?.toLowerCase() === username.toLowerCase() || u.email?.toLowerCase() === username.toLowerCase()) && 
         u.password === password
       );
 
@@ -77,6 +84,7 @@ export default function Login() {
         }));
         
         toast.success('Sesión iniciada correctamente');
+        // Use window.location to force a full app state refresh
         window.location.href = '/';
       } else {
         console.log('Manual check failed: user not found or password mismatch');
@@ -84,14 +92,9 @@ export default function Login() {
         toast.error('Error al iniciar sesión');
       }
     } catch (err: any) {
-      console.error('Error during login:', err);
-      if (err.code === 'auth/wrong-password') {
-        setError('Contraseña incorrecta');
-      } else if (err.code === 'auth/user-not-found') {
-        setError('Usuario no encontrado');
-      } else {
-        setError('Error al conectar con el servidor');
-      }
+      console.error('Error during login process:', err);
+      setError('Error al conectar con el servidor');
+      toast.error('Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -114,151 +117,185 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-[40px] shadow-2xl border border-neutral-100 dark:border-neutral-800 p-10 space-y-8">
-        <div className="text-center space-y-2">
-          <img 
-            src="/logo.png" 
-            alt="Logo" 
-            className="h-24 w-auto object-contain mx-auto mb-4"
-            referrerPolicy="no-referrer"
-          />
-          <h1 className="text-3xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase">Kraken OS</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 font-medium">Inicia sesión para gestionar tu negocio</p>
+    <div className="min-h-screen flex items-center justify-center bg-black p-4 relative overflow-hidden font-sans">
+      {/* Decorative background elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-kraken-orange/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-kraken-orange/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-md z-10">
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <img 
+              src="/logo.png" 
+              alt="Kraken Logo" 
+              className="h-24 w-auto mx-auto mb-4 drop-shadow-[0_0_15px_rgba(255,77,0,0.3)]"
+              referrerPolicy="no-referrer"
+            />
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
+              Kraken <span className="text-kraken-orange">OS</span>
+            </h1>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-[0.6em] font-black mt-2">Handyman Operating System</p>
+          </motion.div>
         </div>
 
-        {!showChangePassword ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Email o Usuario</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="kraken-input pl-12"
-                  placeholder="admin@ejemplo.com"
-                  required
-                />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="bg-neutral-900/50 backdrop-blur-xl border border-neutral-800 p-10 rounded-[40px] shadow-2xl relative overflow-hidden"
+        >
+          {/* Subtle inner glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kraken-orange/20 to-transparent" />
+
+          {!showChangePassword ? (
+            <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] ml-1">Usuario o Email</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-kraken-orange transition-colors">
+                    <User size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full h-14 bg-black border border-neutral-800 rounded-2xl pl-12 pr-4 text-white placeholder:text-neutral-700 focus:border-kraken-orange focus:ring-4 focus:ring-kraken-orange/10 transition-all outline-none font-bold"
+                    placeholder="admin@kraken.com"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Contraseña</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="kraken-input pl-12"
-                  placeholder="••••••••"
-                  required
-                />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] ml-1">Contraseña</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-kraken-orange transition-colors">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-14 bg-black border border-neutral-800 rounded-2xl pl-12 pr-4 text-white placeholder:text-neutral-700 focus:border-kraken-orange focus:ring-4 focus:ring-kraken-orange/10 transition-all outline-none font-bold"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <p className="text-kraken-orange text-sm font-bold text-center">{error}</p>
-            )}
+              {error && (
+                <p className="text-kraken-orange text-xs font-bold text-center bg-kraken-orange/10 py-3 rounded-xl border border-kraken-orange/20 animate-in fade-in slide-in-from-top-2">{error}</p>
+              )}
 
-            <div className="space-y-4">
-              <button 
+              <button
                 type="submit"
                 disabled={loading}
-                className="kraken-btn w-full"
+                className="w-full h-14 bg-kraken-orange hover:bg-kraken-orange/90 text-white rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-lg shadow-kraken-orange/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                {loading ? 'Iniciando...' : 'Entrar al Sistema'}
+                {loading ? (
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Entrar</span>
+                    <ArrowRight size={20} />
+                  </>
+                )}
               </button>
 
-              <div className="relative py-2">
+              <div className="relative my-10">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                  <div className="w-full border-t border-neutral-800"></div>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-neutral-900 px-2 text-neutral-400 font-bold">O continuar con</span>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-black">
+                  <span className="bg-neutral-900 px-4 text-neutral-600">O continuar con</span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full h-14 bg-white hover:bg-neutral-100 text-black rounded-2xl font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-4 active:scale-[0.98] shadow-xl"
+              >
+                <img 
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                  alt="Google" 
+                  className="w-6 h-6"
+                />
+                <span>Google Account</span>
+              </button>
 
               <button 
                 type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="kraken-btn-secondary w-full flex items-center justify-center gap-3"
+                onClick={() => setShowChangePassword(true)}
+                className="w-full text-center text-[10px] font-bold text-neutral-500 hover:text-kraken-orange transition-colors uppercase tracking-widest"
               >
-                <Chrome size={20} className="text-kraken-orange" />
-                <span className="font-bold">Google Account</span>
+                ¿Olvidaste tu contraseña?
               </button>
-            </div>
+            </form>
+          ) : (
+            <form onSubmit={handleChangePassword} className="space-y-6 relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-black text-white uppercase tracking-tight">Recuperar</h2>
+                <button type="button" onClick={() => setShowChangePassword(false)} className="text-neutral-500 hover:text-white transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
 
-            <button 
-              type="button"
-              onClick={() => setShowChangePassword(true)}
-              className="w-full text-center text-xs font-bold text-neutral-400 hover:text-kraken-orange transition-colors"
-            >
-              ¿Olvidaste tu contraseña? Cambiar contraseña
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleChangePassword} className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold dark:text-white">Cambiar Contraseña</h2>
-              <button onClick={() => setShowChangePassword(false)} className="text-neutral-400 hover:text-neutral-600">
-                <X size={20} />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] ml-1">Nueva Contraseña</label>
+                <div className="relative group">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-kraken-orange transition-colors" size={18} />
+                  <input 
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full h-14 bg-black border border-neutral-800 rounded-2xl pl-12 pr-4 text-white placeholder:text-neutral-700 focus:border-kraken-orange focus:ring-4 focus:ring-kraken-orange/10 transition-all outline-none font-bold"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] ml-1">Confirmar Contraseña</label>
+                <div className="relative group">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-kraken-orange transition-colors" size={18} />
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full h-14 bg-black border border-neutral-800 rounded-2xl pl-12 pr-4 text-white placeholder:text-neutral-700 focus:border-kraken-orange focus:ring-4 focus:ring-kraken-orange/10 transition-all outline-none font-bold"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-kraken-orange text-xs font-bold text-center bg-kraken-orange/10 py-3 rounded-xl border border-kraken-orange/20">{error}</p>
+              )}
+
+              {changeSuccess && (
+                <p className="text-green-500 text-xs font-bold text-center bg-green-500/10 py-3 rounded-xl border border-green-500/20">{changeSuccess}</p>
+              )}
+
+              <button 
+                type="submit"
+                className="w-full h-14 bg-white text-black rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-neutral-100 transition-all"
+              >
+                Actualizar Contraseña
               </button>
-            </div>
+            </form>
+          )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Nueva Contraseña</label>
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="kraken-input pl-12"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-4">Confirmar Contraseña</label>
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                <input 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="kraken-input pl-12"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-kraken-orange text-sm font-bold text-center">{error}</p>
-            )}
-
-            {changeSuccess && (
-              <p className="text-green-600 text-sm font-bold text-center">{changeSuccess}</p>
-            )}
-
-            <button 
-              type="submit"
-              className="kraken-btn w-full"
-            >
-              Actualizar Contraseña
-            </button>
-          </form>
-        )}
-
-        <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center">
-          <p className="text-xs text-neutral-400 font-medium">Kraken Handyman OS v1.0 • 2026</p>
-        </div>
+          <p className="mt-10 text-center text-[10px] text-neutral-600 font-bold uppercase tracking-widest">
+            © 2026 Kraken Handyman OS • v2.4.0
+          </p>
+        </motion.div>
       </div>
     </div>
   );
