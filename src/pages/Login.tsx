@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, ShieldCheck, KeyRound, X, Chrome } from 'lucide-react';
+import { Lock, User, KeyRound, X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -44,7 +44,6 @@ export default function Login() {
       setError('Las contraseñas no coinciden');
       return;
     }
-    // Mock password change
     setChangeSuccess('Contraseña actualizada correctamente');
     setTimeout(() => {
       setShowChangePassword(false);
@@ -116,7 +115,7 @@ export default function Login() {
           <form onSubmit={handleChangePassword} className="space-y-6">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold dark:text-white">Cambiar Contraseña</h2>
-              <button onClick={() => setShowChangePassword(false)} className="text-neutral-400 hover:text-neutral-600">
+              <button type="button" onClick={() => setShowChangePassword(false)} className="text-neutral-400 hover:text-neutral-600">
                 <X size={20} />
               </button>
             </div>
