@@ -18,6 +18,7 @@ import {
 import { WorkOrder, Budget } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatFirebaseDate } from '../lib/utils';
 import { useTheme } from '../lib/ThemeContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -28,7 +29,8 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const parseLocalDate = (dateStr: string) => {
+const parseLocalDate = (rawDate: any) => {
+  const dateStr = formatFirebaseDate(rawDate).split('T')[0];
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
