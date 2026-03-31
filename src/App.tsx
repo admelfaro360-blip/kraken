@@ -42,12 +42,22 @@ export default function App() {
         // Fetch additional user data from Firestore (like role)
         try {
           const userData = await getUserById(firebaseUser.uid);
-          if (userData) {
-            setUser({ ...firebaseUser, ...userData });
-          } else {
-            // If no Firestore data, just use the Firebase Auth user
-            setUser(firebaseUser);
+          let finalUser = { 
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            ...userData 
+          };
+
+          // Default admin check for the owner
+          if (firebaseUser.email === 'admelfaro360@gmail.com') {
+            finalUser.role = 'admin';
+          } else if (!finalUser.role) {
+            finalUser.role = 'user';
           }
+
+          setUser(finalUser);
         } catch (err) {
           console.error('Error fetching user data from Firestore:', err);
           setUser(firebaseUser);
