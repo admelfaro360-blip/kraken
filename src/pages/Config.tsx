@@ -158,6 +158,8 @@ import {
   fetchWorkOrders,
   fetchExpenses
 } from '../lib/storage';
+import { secondaryAuth } from '../lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function Config() {
   const [loading, setLoading] = useState(true);
@@ -249,9 +251,35 @@ export default function Config() {
 
     try {
       setSaving(true);
-      const userToSave = editingUser.id 
-        ? editingUser 
-        : { ...editingUser, id: Math.random().toString(36).substr(2, 9) };
+      
+      let userId = editingUser.id;
+      
+      // If it's a new user, create them in Firebase Auth first
+      if (!userId && editingUser.email && editingUser.password) {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            secondaryAuth, 
+            editingUser.email, 
+            editingUser.password
+          );
+          userId = userCredential.user.uid;
+        } catch (authErr: any) {
+          console.error('Error creating auth user:', authErr);
+          if (authErr.code === 'auth/email-already-in-use') {
+            toast.error('El email ya está en uso');
+          } else if (authErr.code === 'auth/weak-password') {
+            toast.error('La contraseña es muy débil');
+          } else {
+            toast.error('Error al crear el acceso del usuario');
+          }
+          return;
+        }
+      }
+
+      const userToSave = { 
+        ...editingUser, 
+        id: userId || Math.random().toString(36).substr(2, 9) 
+      };
 
       await saveUser(userToSave);
       
@@ -632,7 +660,7 @@ export default function Config() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Email</label>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Email (Para iniciar sesión)</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
                     <input 
