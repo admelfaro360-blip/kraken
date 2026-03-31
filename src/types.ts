@@ -35,10 +35,12 @@ export interface Client {
   name: string;
   vertical: 'hogar' | 'industria';
   address: string;
+  city?: string;
   phone: string;
   email: string;
   zone: number;
   notes?: string;
+  createdAt?: string;
 }
 
 export interface LaborAssignment {
@@ -83,6 +85,7 @@ export interface Budget {
   marginPct: number;
   subtotal?: number;
   total?: number;
+  createdAt?: string;
 }
 
 export interface CalculationResult {
@@ -115,6 +118,7 @@ export interface WorkOrder {
   assignedTo?: string[];
   phases?: Phase[];
   notes?: string;
+  createdAt?: string;
 }
 
 export interface Payment {
@@ -127,6 +131,8 @@ export interface Payment {
   status: 'pendiente' | 'cobrado' | 'parcial';
   method?: 'transferencia' | 'efectivo' | 'tarjeta';
   notes?: string;
+  createdAt?: string;
+  dueDate?: string;
 }
 
 export interface Expense {
