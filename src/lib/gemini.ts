@@ -30,7 +30,7 @@ export async function translateText(text: string, targetLanguage: string): Promi
 export async function translateMaterials(materials: any[], targetLanguage: string): Promise<any[]> {
   if (!materials || materials.length === 0) return materials;
 
-  const materialsToTranslate = materials.map(m => m.name).join(", ");
+  const materialsToTranslate = materials.map(m => m.name);
   
   const langMap: Record<string, string> = {
     'es': 'Spanish',
@@ -43,15 +43,23 @@ export async function translateMaterials(materials: any[], targetLanguage: strin
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Translate the following list of construction/maintenance materials to ${targetLangName}. Return the translated names as a comma-separated list in the same order: "${materialsToTranslate}"`,
+      contents: `Translate the following list of construction/maintenance materials to ${targetLangName}. 
+      Return the translated names as a JSON array of strings in the same order. 
+      Only return the JSON array, nothing else: ${JSON.stringify(materialsToTranslate)}`,
+      config: {
+        responseMimeType: "application/json"
+      }
     });
 
-    const translatedNames = response.text.split(",").map(s => s.trim());
+    const translatedNames = JSON.parse(response.text.trim());
     
-    return materials.map((m, i) => ({
-      ...m,
-      name: translatedNames[i] || m.name
-    }));
+    if (Array.isArray(translatedNames)) {
+      return materials.map((m, i) => ({
+        ...m,
+        name: translatedNames[i] || m.name
+      }));
+    }
+    return materials;
   } catch (error) {
     console.error("Materials translation error:", error);
     return materials;
