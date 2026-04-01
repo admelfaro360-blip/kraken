@@ -43,6 +43,7 @@ import {
   resetAllData 
 } from '../lib/storage';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
@@ -72,9 +73,9 @@ const StatCard = ({ title, value, icon: Icon, trend, color = 'orange' }: any) =>
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 flex flex-col gap-4 transition-colors">
+    <div className="kraken-card p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className={`p-3 rounded-2xl ${colorClasses[color] || colorClasses.orange}`}>
+        <div className={cn("p-3 rounded-2xl", colorClasses[color] || colorClasses.orange)}>
           <Icon size={24} />
         </div>
         {trend && (
@@ -93,8 +94,12 @@ const StatCard = ({ title, value, icon: Icon, trend, color = 'orange' }: any) =>
 
 export default function Dashboard() {
   const { isDarkMode } = useTheme();
-  const [period, setPeriod] = React.useState('Marzo');
-  const [year, setYear] = React.useState('2026');
+  const currentMonthName = format(new Date(), 'MMMM', { locale: es });
+  const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+  const currentYear = format(new Date(), 'yyyy');
+
+  const [period, setPeriod] = React.useState(capitalizedMonth);
+  const [year, setYear] = React.useState(currentYear);
   const [isAccumulated, setIsAccumulated] = React.useState(false);
   const [isCustomizing, setIsCustomizing] = React.useState(false);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
@@ -212,7 +217,7 @@ export default function Dashboard() {
   const totalExpenses = filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
   const laborExpenses = filteredExpenses.filter(e => e.category === 'mano_de_obra').reduce((acc, e) => acc + (e.amount || 0), 0);
   const structureExpenses = filteredExpenses.filter(e => e.category === 'fijo').reduce((acc, e) => acc + (e.amount || 0), 0);
-  const netProfit = totalFacturado - totalExpenses - totalIVA;
+  const netProfit = totalFacturado - totalExpenses;
 
   const getMetricValue = (id: string) => {
     switch (id) {
@@ -309,11 +314,11 @@ export default function Dashboard() {
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium tracking-tight">Bienvenido de nuevo, Administrador Kraken.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-800">
             <button 
               onClick={() => setIsAccumulated(false)}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+                "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
                 !isAccumulated ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800"
               )}
             >
@@ -322,7 +327,7 @@ export default function Dashboard() {
             <button 
               onClick={() => setIsAccumulated(true)}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+                "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
                 isAccumulated ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800"
               )}
             >
@@ -333,7 +338,7 @@ export default function Dashboard() {
           <select 
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-kraken-orange/20 dark:text-white"
+            className="kraken-input !h-12 !px-4 !w-auto text-sm"
           >
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -343,8 +348,17 @@ export default function Dashboard() {
             <select 
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-kraken-orange/20 dark:text-white"
+              className="kraken-input !h-12 !px-4 !w-auto text-sm"
             >
+              <option value="Diciembre">Diciembre</option>
+              <option value="Noviembre">Noviembre</option>
+              <option value="Octubre">Octubre</option>
+              <option value="Septiembre">Septiembre</option>
+              <option value="Agosto">Agosto</option>
+              <option value="Julio">Julio</option>
+              <option value="Junio">Junio</option>
+              <option value="Mayo">Mayo</option>
+              <option value="Abril">Abril</option>
               <option value="Marzo">Marzo</option>
               <option value="Febrero">Febrero</option>
               <option value="Enero">Enero</option>
@@ -353,7 +367,7 @@ export default function Dashboard() {
           
           <button 
             onClick={() => setShowResetConfirm(true)}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-red-500 transition-all"
+            className="h-12 w-12 flex items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-red-500 transition-all"
             title="Resetear todos los datos"
           >
             <RotateCcw size={20} />
@@ -361,13 +375,13 @@ export default function Dashboard() {
 
           <button 
             onClick={() => setIsCustomizing(true)}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-kraken-orange transition-all"
+            className="h-12 w-12 flex items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-kraken-orange transition-all"
             title="Personalizar Tablero"
           >
             <Settings2 size={20} />
           </button>
 
-          <Link to="/presupuestos/nuevo" className="px-6 py-2 bg-kraken-orange text-white rounded-xl font-bold text-sm hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 active:scale-95">
+          <Link to="/presupuestos/nuevo" className="kraken-btn !h-12 !px-6 text-sm">
             Nuevo Presupuesto
           </Link>
         </div>
@@ -409,7 +423,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {visibleWidgets.ventas_chart && (
-          <div className="lg:col-span-2 bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 transition-colors">
+          <div className="lg:col-span-2 kraken-card p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <div>
                 <h3 className="text-xl font-bold tracking-tight dark:text-white">Análisis Temporal</h3>
@@ -457,7 +471,7 @@ export default function Dashboard() {
         )}
 
         {visibleWidgets.verticales_chart && (
-          <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 transition-colors">
+          <div className="kraken-card p-8">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl font-bold tracking-tight dark:text-white">Distribución</h3>
               <select 
@@ -516,7 +530,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {visibleWidgets.ordenes_recientes && (
-          <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 transition-colors">
+          <div className="kraken-card p-8">
             <h3 className="text-xl font-bold tracking-tight mb-6 dark:text-white">Órdenes de Trabajo Recientes</h3>
             <div className="space-y-4">
               {recentOrders.length > 0 ? recentOrders.map((ot) => (
@@ -542,7 +556,7 @@ export default function Dashboard() {
         )}
 
         {visibleWidgets.cobros_proximos && (
-          <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 transition-colors">
+          <div className="kraken-card p-8">
             <h3 className="text-xl font-bold tracking-tight mb-6 dark:text-white">Próximos Cobros</h3>
             <div className="space-y-4">
               {upcomingPayments.length > 0 ? upcomingPayments.map((payment) => (
