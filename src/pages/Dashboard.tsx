@@ -40,9 +40,11 @@ import {
   getStoredPayments, 
   getStoredWorkOrders, 
   getStoredExpenses,
-  resetAllData 
+  resetAllData,
+  fetchConfig
 } from '../lib/storage';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { calculateBudget } from '../lib/calculator';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -94,16 +96,17 @@ const StatCard = ({ title, value, icon: Icon, trend, color = 'orange' }: any) =>
 
 export default function Dashboard() {
   const { isDarkMode } = useTheme();
-  const currentMonthName = format(new Date(), 'MMMM', { locale: es });
-  const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+  const monthsList = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const currentMonthName = monthsList[new Date().getMonth()];
   const currentYear = format(new Date(), 'yyyy');
 
-  const [period, setPeriod] = React.useState(capitalizedMonth);
+  const [period, setPeriod] = React.useState(currentMonthName);
   const [year, setYear] = React.useState(currentYear);
   const [isAccumulated, setIsAccumulated] = React.useState(false);
   const [isCustomizing, setIsCustomizing] = React.useState(false);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
   
   // Real data state
   const [budgets, setBudgets] = React.useState<any[]>([]);
@@ -111,25 +114,43 @@ export default function Dashboard() {
   const [payments, setPayments] = React.useState<any[]>([]);
   const [workOrders, setWorkOrders] = React.useState<any[]>([]);
   const [expenses, setExpenses] = React.useState<any[]>([]);
+  const [config, setConfig] = React.useState<any>(null);
+
+  const [metrics, setMetrics] = React.useState({
+    totalFacturado: 0,
+    totalBudgets: 0,
+    approvalRate: 0,
+    uniqueClients: 0,
+    totalIVA: 0,
+    netProfit: 0,
+    structureExpenses: 0,
+    laborExpenses: 0,
+    totalExpenses: 0
+  });
 
   React.useEffect(() => {
     setIsMounted(true);
     const loadData = async () => {
+      setLoading(true);
       try {
-        const [b, c, p, wo, e] = await Promise.all([
+        const [b, c, p, wo, e, conf] = await Promise.all([
           getStoredBudgets(),
           getStoredClients(),
           getStoredPayments(),
           getStoredWorkOrders(),
-          getStoredExpenses()
+          getStoredExpenses(),
+          fetchConfig()
         ]);
         setBudgets(b);
         setClients(c);
         setPayments(p);
         setWorkOrders(wo);
         setExpenses(e);
+        setConfig(conf);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
     loadData();
@@ -207,37 +228,79 @@ export default function Dashboard() {
   const filteredPayments = filterByPeriod(payments);
   const filteredExpenses = filterByPeriod(expenses);
 
-  // Calculate Metrics
-  const totalFacturado = filteredPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
-  const totalBudgets = filteredBudgets.length;
-  const approvedBudgets = filteredBudgets.filter(b => b.status === 'aprobado' || b.status === 'ejecucion' || b.status === 'finalizado').length;
-  const approvalRate = totalBudgets > 0 ? Math.round((approvedBudgets / totalBudgets) * 100) : 0;
-  const uniqueClients = new Set(filteredBudgets.map(b => b.clientId)).size;
-  const totalIVA = totalFacturado * 0.23; // Assuming 23%
-  const totalExpenses = filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
-  const laborExpenses = filteredExpenses.filter(e => e.category === 'mano_de_obra').reduce((acc, e) => acc + (e.amount || 0), 0);
-  const structureExpenses = filteredExpenses.filter(e => e.category === 'fijo').reduce((acc, e) => acc + (e.amount || 0), 0);
-  const netProfit = totalFacturado - totalExpenses;
+  React.useEffect(() => {
+    if (loading || !config) return;
+
+    const approvedBudgets = filteredBudgets.filter(b => 
+      ['aprobado', 'ejecucion', 'finalizado', 'cobrado'].includes(b.status)
+    );
+
+    // 1. TOTAL FACTURADO: Sumatoria del 'Total General' de presupuestos aprobados
+    const totalFacturado = approvedBudgets.reduce((acc, b) => acc + (b.total || 0), 0);
+
+    // 2. PRESUPUESTOS: Conteo total del mes
+    const totalBudgetsCount = filteredBudgets.length;
+
+    // 3. TASA DE APROBACIÓN: (Aprobados / Total) * 100
+    const approvalRate = totalBudgetsCount > 0 ? (approvedBudgets.length / totalBudgetsCount) * 100 : 0;
+
+    // 4. CLIENTES ÚNICOS: Set de IDs de clientes en presupuestos y cobros
+    const clientsFromBudgets = filteredBudgets.map(b => b.clientId);
+    const clientsFromPayments = filteredPayments.map(p => p.clientId);
+    const uniqueClientsCount = new Set([...clientsFromBudgets, ...clientsFromPayments]).size;
+
+    // 5, 6, 7. IVA, Ganancia Neta, Estructura y MO
+    let totalIVA = 0;
+    let totalMarginReal = 0;
+    let totalStructureCost = 0;
+    let totalLaborCost = 0;
+
+    approvedBudgets.forEach(b => {
+      const client = clients.find(c => c.id === b.clientId || c.name === b.clientId);
+      const zone = client ? client.zone : 1;
+      const calc = calculateBudget(b.phases, b.materials, config, zone, b.marginPct);
+      
+      totalIVA += calc.iva;
+      totalMarginReal += calc.marginEur;
+      totalStructureCost += calc.structureTotal;
+      totalLaborCost += calc.moTotal;
+    });
+
+    const totalExpenses = filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    const netProfit = totalMarginReal - totalExpenses;
+
+    setMetrics({
+      totalFacturado,
+      totalBudgets: totalBudgetsCount,
+      approvalRate,
+      uniqueClients: uniqueClientsCount,
+      totalIVA,
+      netProfit,
+      structureExpenses: totalStructureCost,
+      laborExpenses: totalLaborCost,
+      totalExpenses
+    });
+  }, [filteredBudgets, filteredPayments, filteredExpenses, config, clients, loading]);
 
   const getMetricValue = (id: string) => {
     switch (id) {
-      case 'facturado': return totalFacturado.toLocaleString('de-DE') + ' €';
-      case 'presupuestos': return totalBudgets.toString();
-      case 'aprobacion': return approvalRate + '%';
-      case 'clientes': return uniqueClients.toString();
-      case 'iva': return totalIVA.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'ganancia': return netProfit.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'gastos_estructura': return structureExpenses.toLocaleString('de-DE') + ' €';
-      case 'gastos_mo': return laborExpenses.toLocaleString('de-DE') + ' €';
-      case 'gastos_totales': return totalExpenses.toLocaleString('de-DE') + ' €';
-      case 'margen_promedio': return totalFacturado > 0 ? Math.round((netProfit / totalFacturado) * 100) + '%' : '0%';
+      case 'facturado': return metrics.totalFacturado.toLocaleString('de-DE') + ' €';
+      case 'presupuestos': return metrics.totalBudgets.toString();
+      case 'aprobacion': return Math.round(metrics.approvalRate) + '%';
+      case 'clientes': return metrics.uniqueClients.toString();
+      case 'iva': return metrics.totalIVA.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
+      case 'ganancia': return metrics.netProfit.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_estructura': return metrics.structureExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_mo': return metrics.laborExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_totales': return metrics.totalExpenses.toLocaleString('de-DE') + ' €';
+      case 'margen_promedio': return metrics.totalFacturado > 0 ? Math.round((metrics.netProfit / metrics.totalFacturado) * 100) + '%' : '0%';
       default: return '0';
     }
   };
 
   // Chart Data Calculation
   const getChartData = () => {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     return months.map((month, idx) => {
       const monthStart = startOfMonth(new Date(parseInt(year), idx));
       const monthEnd = endOfMonth(new Date(parseInt(year), idx));
@@ -305,6 +368,17 @@ export default function Dashboard() {
     // Refresh page to clear state
     window.location.reload();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-kraken-orange border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-neutral-500 font-bold animate-pulse uppercase tracking-widest">Cargando Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10">
