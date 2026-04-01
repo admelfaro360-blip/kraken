@@ -376,7 +376,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   };
 
   const checkPageBreak = (neededHeight: number) => {
-    if (currentY + neededHeight > pageHeight - 25) {
+    if (currentY + neededHeight > pageHeight - 30) {
       drawFooter();
       doc.addPage();
       currentY = margin + 10;
@@ -397,7 +397,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.text(t.descriptionLabel, margin + 4, currentY);
   
   currentY += 7;
-  doc.setFontSize(isMobile ? 9 : 11);
+  doc.setFontSize(isMobile ? 9 : 10);
   doc.setFont('helvetica', 'normal');
   const splitDesc = doc.splitTextToSize(displayDescription, pageWidth - (margin * 2));
   splitDesc.forEach((line: string) => {
@@ -425,7 +425,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.text(t.materialsLabel, margin + 4, currentY);
   
   currentY += 7;
-  doc.setFontSize(isMobile ? 9 : 11);
+  doc.setFontSize(isMobile ? 9 : 10);
   doc.setFont('helvetica', 'normal');
   
   if (displayMaterials && displayMaterials.length > 0) {
@@ -454,7 +454,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
   // 6. Total General
-  checkPageBreak(25);
+  checkPageBreak(35);
   currentY += 15;
   doc.setFontSize(isMobile ? 12 : 16);
   doc.setFont('helvetica', 'bold');
@@ -465,7 +465,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € + ${t.ivaLabel}`, pageWidth - margin, currentY, { align: 'right' });
 
   // 7. Información de Pago
-  checkPageBreak(25);
+  checkPageBreak(30);
   currentY += 15;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
