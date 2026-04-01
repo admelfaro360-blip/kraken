@@ -267,7 +267,10 @@ export const saveConfig = async (config: any) => {
 export const fetchUsers = async (): Promise<any[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
-    return querySnapshot.docs.map(doc => doc.data());
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
   } catch (e) {
     handleFirestoreError(e, OperationType.LIST, USERS_COLLECTION);
     return [];
