@@ -1,10 +1,10 @@
 {
-  "projectId": "fleet-gift-376715",
-  "appId": "1:545548186968:web:9809a0061e01c8df1ee12d",
-  "apiKey": "AIzaSyAIKsIjJFv0Wm03zuZ1h6HPHZ3bXvbRe-s",
-  "authDomain": "fleet-gift-376715.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-bfa847be-8b8a-4cfa-b83d-8d507c7ddc38",
-  "storageBucket": "fleet-gift-376715.firebasestorage.app",
-  "messagingSenderId": "545548186968",
+  "projectId": "kraken-handyman",
+  "appId": "1:289798963894:web:0b1b1b348f7a9dc9661c17",
+  "apiKey": "AIzaSyChLguIMlaRJ1fl3IaD0x1DcpnACtjNQ2I",
+  "authDomain": "kraken-handyman.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "kraken-handyman.firebasestorage.app",
+  "messagingSenderId": "289798963894",
   "measurementId": ""
 }
