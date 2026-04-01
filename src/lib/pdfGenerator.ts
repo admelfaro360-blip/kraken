@@ -28,6 +28,7 @@ interface PDFData {
   calculation: CalculationResult;
   materials: Material[];
   language: 'es' | 'pt' | 'en';
+  config?: any;
 }
 
 const translations = {
@@ -44,8 +45,8 @@ const translations = {
     materialsLabel: 'Materiales',
     noMaterials: 'No se especifican materiales adicionales.',
     totalMaterials: 'Total materiales:',
-    totalGeneral: 'Total general:',
-    ivaLabel: 'IVA',
+    totalGeneral: 'PRECIO TOTAL:',
+    ivaLabel: 'I.V.A',
     footer: 'Somos confianza, somos kraken'
   },
   pt: {
@@ -61,8 +62,8 @@ const translations = {
     materialsLabel: 'Materiais',
     noMaterials: 'Não são especificados materiais adicionais.',
     totalMaterials: 'Total materiais:',
-    totalGeneral: 'Total geral:',
-    ivaLabel: 'IVA',
+    totalGeneral: 'PREÇO TOTAL:',
+    ivaLabel: 'I.V.A',
     footer: 'Somos confiança, somos kraken'
   },
   en: {
@@ -78,8 +79,8 @@ const translations = {
     materialsLabel: 'Materials',
     noMaterials: 'No additional materials specified.',
     totalMaterials: 'Total materials:',
-    totalGeneral: 'General total:',
-    ivaLabel: 'VAT',
+    totalGeneral: 'TOTAL PRICE:',
+    ivaLabel: 'V.A.T',
     footer: 'We are trust, we are kraken'
   }
 };
@@ -334,13 +335,13 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
   
-  doc.setFontSize(isMobile ? 11 : 13);
+  doc.setFontSize(isMobile ? 10 : 12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text(t.clientData, margin + 4, currentY);
   
   currentY += 7;
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 9 : 11);
   doc.setFont('helvetica', 'normal');
   doc.text(`${t.clientName} ${data.client.name}`, margin, currentY);
   currentY += 6;
@@ -354,94 +355,129 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setLineWidth(0.1);
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
+  const drawFooter = () => {
+    const footerY = pageHeight - 12;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.1);
+    doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
+    
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(isMobile ? 8 : 9);
+    doc.setFont('helvetica', 'normal');
+    
+    // Izquierda: Instagram
+    doc.text("@kraken_pt", margin, footerY);
+    
+    // Centro: Frase actual
+    doc.text(t.footer, pageWidth / 2, footerY, { align: 'center' });
+    
+    // Derecha: Celular
+    doc.text("967 873 913", pageWidth - margin, footerY, { align: 'right' });
+  };
+
+  const checkPageBreak = (neededHeight: number) => {
+    if (currentY + neededHeight > pageHeight - 25) {
+      drawFooter();
+      doc.addPage();
+      currentY = margin + 10;
+      return true;
+    }
+    return false;
+  };
+
   // 4. Descripción
+  checkPageBreak(30);
   currentY += 10;
   doc.setDrawColor(209, 4, 41); // Kraken Red
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
 
-  doc.setFontSize(isMobile ? 11 : 13);
+  doc.setFontSize(isMobile ? 10 : 12);
   doc.setFont('helvetica', 'bold');
   doc.text(t.descriptionLabel, margin + 4, currentY);
   
   currentY += 7;
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 9 : 11);
   doc.setFont('helvetica', 'normal');
   const splitDesc = doc.splitTextToSize(displayDescription, pageWidth - (margin * 2));
   splitDesc.forEach((line: string) => {
+    checkPageBreak(6);
     doc.text(line, margin, currentY);
     currentY += 6;
   });
 
   // Línea horizontal negra (Fina)
+  checkPageBreak(10);
   currentY += 4;
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.1);
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
   // 5. Materiales
+  checkPageBreak(30);
   currentY += 10;
   doc.setDrawColor(209, 4, 41); // Kraken Red
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
 
-  doc.setFontSize(isMobile ? 11 : 13);
+  doc.setFontSize(isMobile ? 10 : 12);
   doc.setFont('helvetica', 'bold');
   doc.text(t.materialsLabel, margin + 4, currentY);
   
   currentY += 7;
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 9 : 11);
   doc.setFont('helvetica', 'normal');
   
   if (displayMaterials && displayMaterials.length > 0) {
     displayMaterials.forEach((mat) => {
+      checkPageBreak(6);
       const unit = (mat as any).unit || 'un.';
-      doc.text(`• ${mat.name} (${mat.quantity} ${unit})`, margin + 5, currentY);
+      const unitPrice = mat.cost * (1 + (data as any).config?.materialMarkup || 0.25);
+      const totalMat = unitPrice * mat.quantity;
+      
+      doc.text(`• ${mat.name}`, margin + 5, currentY);
+      doc.text(`${mat.quantity} ${unit}`, pageWidth - margin - 35, currentY, { align: 'right' });
+      doc.text(`${totalMat.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
       currentY += 6;
     });
   } else {
+    checkPageBreak(6);
     doc.text(`• ${t.noMaterials}`, margin + 5, currentY);
     currentY += 6;
   }
 
-  currentY += 4;
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${t.totalMaterials} ${data.calculation.materialsFactured.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
-
   // Línea horizontal negra (Fina)
+  checkPageBreak(10);
   currentY += 4;
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.1);
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
   // 6. Total General
-  currentY += 15; // Más abajo
-  doc.setFontSize(isMobile ? 13 : 16);
+  checkPageBreak(25);
+  currentY += 15;
+  doc.setFontSize(isMobile ? 12 : 16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 100, 0); // Naranja (Orange)
+  doc.setTextColor(209, 4, 41); // Kraken Red
   
   const subtotal = data.calculation.subtotal;
   
   doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € + ${t.ivaLabel}`, pageWidth - margin, currentY, { align: 'right' });
 
-  // 7. Pie de Página
-  const footerY = pageHeight - 12;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.1);
-  doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
-  
-  doc.setTextColor(100, 100, 100);
-  doc.setFontSize(isMobile ? 8 : 9);
+  // 7. Información de Pago
+  checkPageBreak(25);
+  currentY += 15;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
-  // Izquierda: Instagram
-  doc.text("@kraken_pt", margin, footerY);
-  
-  // Centro: Frase actual
-  doc.text(t.footer, pageWidth / 2, footerY, { align: 'center' });
-  
-  // Derecha: Celular
-  doc.text("967 873 913", pageWidth - margin, footerY, { align: 'right' });
+  doc.setTextColor(50, 50, 50);
+  doc.text("Forma de Pago: (50% al inicio de obra)", margin, currentY);
+  currentY += 5;
+  doc.text("iban: DE95100110012356675960 (Eduardo Federico Martínez)", margin, currentY);
+  currentY += 5;
+  doc.text("mbway: +351 967 873 913", margin, currentY);
+
+  // 8. Pie de Página
+  drawFooter();
 
   return doc;
 };
