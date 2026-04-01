@@ -137,18 +137,6 @@ export default function NewBudget() {
     }
   }, [budgetId]);
 
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const response = await fetch('/api/config');
-        const data = await response.json();
-        setConfig(data);
-      } catch (err) {
-        console.error('Error fetching config:', err);
-      }
-    };
-    fetchConfig();
-  }, []);
 
   useEffect(() => {
     if (!config) return;
@@ -298,7 +286,8 @@ export default function NewBudget() {
       description: description || 'Sin descripción',
       calculation: calculation,
       materials: materials,
-      language: clientInfo.language
+      language: clientInfo.language,
+      config: config
     });
     doc.save(`Presupuesto_${clientInfo.name || 'Kraken'}.pdf`);
   };
@@ -314,7 +303,7 @@ export default function NewBudget() {
           {step > 1 && (
             <button 
               onClick={() => setStep(step - 1)}
-              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all dark:text-white"
+              className="kraken-btn-secondary"
             >
               <ChevronLeft size={20} />
               <span>Anterior</span>
@@ -323,7 +312,7 @@ export default function NewBudget() {
           {step < 3 ? (
             <button 
               onClick={() => setStep(step + 1)}
-              className="flex items-center gap-2 px-6 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-all shadow-lg"
+              className="kraken-btn"
             >
               <span>Siguiente</span>
               <ChevronRight size={20} />
@@ -331,7 +320,7 @@ export default function NewBudget() {
           ) : (
             <button 
               onClick={handleSave}
-              className="flex items-center gap-2 px-8 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+              className="kraken-btn"
             >
               <Save size={20} />
               <span>Guardar Presupuesto</span>
@@ -344,7 +333,7 @@ export default function NewBudget() {
         <div className="lg:col-span-2 space-y-8">
           {step === 1 && (
             <>
-              <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 space-y-8 transition-colors">
+              <div className="kraken-card p-8 space-y-8">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="p-3 rounded-2xl bg-kraken-orange text-white">
                     <Users size={24} />
@@ -358,7 +347,7 @@ export default function NewBudget() {
                     <select 
                       value={clients.find(c => c.name === clientInfo.name)?.id || ''}
                       onChange={(e) => handleClientSelect(e.target.value)}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     >
                       <option value="">-- Nuevo Cliente --</option>
                       {clients.map(client => (
@@ -373,7 +362,7 @@ export default function NewBudget() {
                       value={clientInfo.name}
                       onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
                       placeholder="Ej: Juan Pérez o Tech Corp"
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div className="space-y-2">
@@ -383,7 +372,7 @@ export default function NewBudget() {
                       value={clientInfo.phone}
                       onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
                       placeholder="+34 000 000 000"
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div className="md:col-span-2 space-y-2">
@@ -393,7 +382,7 @@ export default function NewBudget() {
                       value={clientInfo.address}
                       onChange={(e) => setClientInfo({ ...clientInfo, address: e.target.value })}
                       placeholder="Calle, Número, Piso, Ciudad"
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div className="space-y-2">
@@ -401,7 +390,7 @@ export default function NewBudget() {
                     <select 
                       value={clientInfo.vertical}
                       onChange={(e) => setClientInfo({ ...clientInfo, vertical: e.target.value as any })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     >
                       <option value="hogar">Hogar (Particular)</option>
                       <option value="industria">Industria (Corporativo)</option>
@@ -412,7 +401,7 @@ export default function NewBudget() {
                     <select 
                       value={clientInfo.language}
                       onChange={(e) => setClientInfo({ ...clientInfo, language: e.target.value as any })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     >
                       <option value="es">Español</option>
                       <option value="pt">Portugués</option>
@@ -427,7 +416,7 @@ export default function NewBudget() {
                     <select 
                       value={clientZone}
                       onChange={(e) => setClientZone(Number(e.target.value))}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     >
                       <option value={1}>Zona 1 (10 €)</option>
                       <option value={2}>Zona 2 (15 €)</option>
@@ -441,7 +430,7 @@ export default function NewBudget() {
                       type="number" 
                       value={marginPct}
                       onChange={(e) => setMarginPct(Number(e.target.value))}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                 </div>
@@ -459,7 +448,7 @@ export default function NewBudget() {
                   </button>
                 </div>
                 {phases.map((phase, index) => (
-                  <div key={phase.id} className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 space-y-6 relative group transition-colors">
+                  <div key={phase.id} className="kraken-card p-6 space-y-6 relative group">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black text-neutral-200 dark:text-neutral-700 uppercase tracking-[0.2em]">Fase {index + 1}</span>
                       <button 
@@ -476,7 +465,7 @@ export default function NewBudget() {
                           type="text" 
                           value={phase.name}
                           onChange={(e) => updatePhase(phase.id, 'name', e.target.value)}
-                          className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                          className="kraken-input h-10 px-3 text-sm"
                         />
                       </div>
                       
@@ -496,7 +485,7 @@ export default function NewBudget() {
                               <select 
                                 value={labor.role}
                                 onChange={(e) => updateLabor(phase.id, labor.id, 'role', e.target.value as any)}
-                                className="flex-1 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-xs dark:text-white"
+                                className="kraken-input h-9 px-2 text-xs flex-1"
                               >
                                 <option value="oficial">Oficial</option>
                                 <option value="ayudante">Ayudante</option>
@@ -506,7 +495,7 @@ export default function NewBudget() {
                                 min="1"
                                 value={labor.count}
                                 onChange={(e) => updateLabor(phase.id, labor.id, 'count', Number(e.target.value))}
-                                className="w-16 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-xs dark:text-white text-center"
+                                className="kraken-input h-9 px-2 text-xs w-16 text-center"
                               />
                               {phase.labor.length > 1 && (
                                 <button 
@@ -528,7 +517,7 @@ export default function NewBudget() {
                             type="number" 
                             value={phase.halfDays}
                             onChange={(e) => updatePhase(phase.id, 'halfDays', Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                            className="kraken-input h-10 px-3 text-sm"
                           />
                         </div>
                         <div className="space-y-2">
@@ -537,7 +526,7 @@ export default function NewBudget() {
                             type="number" 
                             value={phase.days}
                             onChange={(e) => updatePhase(phase.id, 'days', Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                            className="kraken-input h-10 px-3 text-sm"
                           />
                         </div>
                       </div>
@@ -549,7 +538,7 @@ export default function NewBudget() {
           )}
 
           {step === 2 && (
-            <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 space-y-8 transition-colors">
+            <div className="kraken-card p-8 space-y-8">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold tracking-tight dark:text-white">Materiales</h3>
                 <button 
@@ -574,7 +563,7 @@ export default function NewBudget() {
                           type="text" 
                           value={material.name}
                           onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                          className="kraken-input h-10 px-3 text-sm"
                         />
                       </div>
                       <div className="space-y-2">
@@ -583,7 +572,7 @@ export default function NewBudget() {
                           type="number" 
                           value={material.cost}
                           onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
-                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                          className="kraken-input h-10 px-3 text-sm"
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -593,7 +582,7 @@ export default function NewBudget() {
                             type="number" 
                             value={material.quantity}
                             onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none font-bold text-sm dark:text-white"
+                            className="kraken-input h-10 px-3 text-sm"
                           />
                         </div>
                         <button 
@@ -612,7 +601,7 @@ export default function NewBudget() {
 
           {step === 3 && (
             <div className="space-y-8">
-              <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 space-y-8 transition-colors">
+              <div className="kraken-card p-8 space-y-8">
                 <h3 className="text-xl font-bold tracking-tight dark:text-white">Resumen y Notas Finales</h3>
                 <div className="space-y-4">
                   <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Descripción del Trabajo (Visible al Cliente)</label>
@@ -620,7 +609,7 @@ export default function NewBudget() {
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-medium dark:text-white"
+                    className="kraken-input h-auto py-3 font-medium"
                     placeholder="Describe detalladamente las tareas a realizar..."
                   />
                 </div>
@@ -630,7 +619,7 @@ export default function NewBudget() {
                     rows={3}
                     value={internalNotes}
                     onChange={(e) => setInternalNotes(e.target.value)}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-medium dark:text-white"
+                    className="kraken-input h-auto py-3 font-medium"
                     placeholder="Notas para el equipo o recordatorios..."
                   />
                 </div>
@@ -643,7 +632,7 @@ export default function NewBudget() {
                 </div>
                 <button 
                   onClick={handleDownloadPDF}
-                  className="flex items-center gap-3 px-8 py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/40 w-full md:w-auto justify-center"
+                  className="kraken-btn w-full md:w-auto justify-center py-4"
                 >
                   <FileText size={24} />
                   <span>Generar PDF Profesional</span>
@@ -690,11 +679,11 @@ export default function NewBudget() {
               <div className="pt-8 border-t border-neutral-800 space-y-2">
                 <div className="flex items-center justify-between text-base">
                   <span className="text-neutral-400 font-medium">Subtotal</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{calculation?.subtotal.toFixed(2)} €</span>
+                  <span className="font-bold text-white">{calculation?.subtotal.toFixed(2)} €</span>
                 </div>
                 <div className="flex items-center justify-between text-base">
                   <span className="text-neutral-400 font-medium">IVA ({config.iva * 100}%)</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{calculation?.iva.toFixed(2)} €</span>
+                  <span className="font-bold text-white">{calculation?.iva.toFixed(2)} €</span>
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
                   <span className="text-xs font-bold tracking-tight uppercase text-neutral-400">TOTAL GENERAL</span>
