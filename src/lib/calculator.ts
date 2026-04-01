@@ -48,7 +48,10 @@ export const calculateBudget = (
 
   // 6. Margen de ganancia (Aplicado sobre el servicio)
   // Nota: marginPct viene como entero (ej: 30) desde el estado del componente
-  const marginEur = minWithoutMargin * (marginPct / 100);
+  const margenDecimal = marginPct / 100;
+  // Fórmula del Margen de Utilidad real: Costo / (1 - Margen)
+  const precioObjetivo = marginPct < 100 ? minWithoutMargin / (1 - margenDecimal) : minWithoutMargin;
+  const marginEur = precioObjetivo - minWithoutMargin;
 
   // 7. Materiales facturados: costo materiales × (1 + markup materiales)
   // Nota: config.materialMarkup es un decimal (ej: 0.25 para 25%)
