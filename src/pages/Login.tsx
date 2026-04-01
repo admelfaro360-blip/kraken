@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ShieldCheck, KeyRound, X, Chrome, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { auth } from '../lib/firebase';
+import { auth, firebaseConfig } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
 import { fetchUsers } from '../lib/storage';
 import { toast } from 'sonner';
@@ -18,18 +18,32 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log('Login component mounted');
+    console.log('Firebase Project ID:', firebaseConfig.projectId);
+    console.log('Current Domain:', window.location.hostname);
+  }, []);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      console.log('Initiating Google Login...');
+      const result = await signInWithPopup(auth, provider);
+      console.log('Google Login success:', result.user.email);
       toast.success('Sesión iniciada correctamente');
       navigate('/');
     } catch (err: any) {
-      console.error('Error logging in with Google:', err);
-      setError('Error al iniciar sesión con Google');
-      toast.error('Error al iniciar sesión');
+      console.error('Google Login error:', err);
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentDomain = window.location.hostname;
+        setError(`Error de dominio: Debes autorizar "${currentDomain}" en la consola de Firebase.`);
+        toast.error('Dominio no autorizado');
+      } else {
+        setError('Error al iniciar sesión con Google');
+        toast.error('Error al iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +61,7 @@ export default function Login() {
       try {
         // If it's an email, try it directly
         if (username.includes('@')) {
+          console.log('Attempting Firebase Auth with email:', username);
           await signInWithEmailAndPassword(auth, username, password);
           console.log('Firebase Auth success');
           toast.success('Sesión iniciada correctamente');
@@ -54,40 +69,44 @@ export default function Login() {
           return;
         }
       } catch (authErr: any) {
-        console.log('Firebase Auth failed:', authErr.code);
+        console.warn('Firebase Auth failed:', authErr.code, authErr.message);
         // If it's a wrong password, we should stop here
         if (authErr.code === 'auth/wrong-password' || authErr.code === 'auth/invalid-credential') {
-          // But wait, maybe the manual check has a different password?
-          // Let's continue to manual check just in case
+          console.log('Wrong password in Firebase Auth, but continuing to manual check just in case');
         }
       }
 
       // Manual check for users created before this update or with username
-      console.log('Trying manual check...');
+      console.log('Trying manual check against Firestore users collection...');
       const users = await fetchUsers();
       console.log('Fetched users count:', users.length);
       
-      const user = users.find(u => 
-        (u.username?.toLowerCase() === username.toLowerCase() || u.email?.toLowerCase() === username.toLowerCase()) && 
-        u.password === password
-      );
+      const user = users.find(u => {
+        const matchUsername = u.username?.toLowerCase() === username.toLowerCase();
+        const matchEmail = u.email?.toLowerCase() === username.toLowerCase();
+        const matchPassword = u.password === password;
+        return (matchUsername || matchEmail) && matchPassword;
+      });
 
       if (user) {
-        console.log('Manual check success, user role:', user.role);
+        console.log('Manual check success! User found:', user.username || user.email);
+        console.log('User role:', user.role);
         // Store session in localStorage for App.tsx to pick up
         localStorage.setItem('kraken_user', JSON.stringify({
-          uid: user.id,
+          uid: user.id || user.email || 'local-user',
           email: user.email,
-          displayName: user.username,
-          role: user.role,
+          displayName: user.username || user.email,
+          role: user.role || 'user',
           isLocal: true
         }));
         
-        toast.success('Sesión iniciada correctamente');
+        toast.success('Sesión iniciada correctamente (Acceso Local)');
         // Use window.location to force a full app state refresh
-        window.location.href = '/';
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
       } else {
-        console.log('Manual check failed: user not found or password mismatch');
+        console.log('Manual check failed: No matching user/password found in Firestore');
         setError('Usuario o contraseña incorrectos');
         toast.error('Error al iniciar sesión');
       }
@@ -135,9 +154,6 @@ export default function Login() {
               className="h-24 w-auto mx-auto mb-4 drop-shadow-[0_0_15px_rgba(255,77,0,0.3)]"
               referrerPolicy="no-referrer"
             />
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
-              Kraken <span className="text-kraken-orange">OS</span>
-            </h1>
             <p className="text-[10px] text-neutral-500 uppercase tracking-[0.6em] font-black mt-2">Handyman Operating System</p>
           </motion.div>
         </div>
