@@ -203,13 +203,13 @@ export default function Dashboard() {
   ];
 
   // Helper to get month index from name
-  const getMonthIndex = (monthName: string) => {
+  const getMonthIndex = React.useCallback((monthName: string) => {
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     return months.indexOf(monthName);
-  };
+  }, []);
 
   // Filter data based on period
-  const filterByPeriod = (items: any[]) => {
+  const filterByPeriod = React.useCallback((items: any[]) => {
     if (isAccumulated) return items;
     const monthIdx = getMonthIndex(period);
     const start = startOfMonth(new Date(parseInt(year), monthIdx));
@@ -221,12 +221,12 @@ export default function Dashboard() {
       const dateStr = formatFirebaseDate(rawDate);
       return isWithinInterval(parseISO(dateStr), { start, end });
     });
-  };
+  }, [isAccumulated, period, year, getMonthIndex]);
 
-  const filteredBudgets = filterByPeriod(budgets);
-  const filteredWorkOrders = filterByPeriod(workOrders);
-  const filteredPayments = filterByPeriod(payments);
-  const filteredExpenses = filterByPeriod(expenses);
+  const filteredBudgets = React.useMemo(() => filterByPeriod(budgets), [filterByPeriod, budgets]);
+  const filteredWorkOrders = React.useMemo(() => filterByPeriod(workOrders), [filterByPeriod, workOrders]);
+  const filteredPayments = React.useMemo(() => filterByPeriod(payments), [filterByPeriod, payments]);
+  const filteredExpenses = React.useMemo(() => filterByPeriod(expenses), [filterByPeriod, expenses]);
 
   React.useEffect(() => {
     if (loading || !config) return;
@@ -299,7 +299,7 @@ export default function Dashboard() {
   };
 
   // Chart Data Calculation
-  const getChartData = () => {
+  const chartData = React.useMemo(() => {
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     return months.map((month, idx) => {
       const monthStart = startOfMonth(new Date(parseInt(year), idx));
@@ -325,32 +325,30 @@ export default function Dashboard() {
 
       return { name: month, total, aprobado, profit };
     });
-  };
+  }, [budgets, payments, year]);
 
-  const chartData = getChartData();
-
-  const pieData = [
+  const pieData = React.useMemo(() => [
     { name: 'Hogar', value: filteredBudgets.filter(b => b.vertical === 'hogar').length },
     { name: 'Industria', value: filteredBudgets.filter(b => b.vertical === 'industria').length },
-  ];
+  ], [filteredBudgets]);
 
-  const statusPieData = [
+  const statusPieData = React.useMemo(() => [
     { name: 'Pendientes', value: filteredBudgets.filter(b => b.status === 'pendiente').length },
     { name: 'En Ejecución', value: filteredBudgets.filter(b => b.status === 'ejecucion').length },
     { name: 'Finalizados', value: filteredBudgets.filter(b => b.status === 'finalizado').length },
-  ];
+  ], [filteredBudgets]);
 
-  const recentOrders = [...workOrders].sort((a, b) => {
+  const recentOrders = React.useMemo(() => [...workOrders].sort((a, b) => {
     const dateA = new Date(formatFirebaseDate(a.createdAt || '')).getTime();
     const dateB = new Date(formatFirebaseDate(b.createdAt || '')).getTime();
     return dateB - dateA;
-  }).slice(0, 3);
+  }).slice(0, 3), [workOrders]);
   
-  const upcomingPayments = [...payments].filter(p => p.status === 'pendiente').sort((a, b) => {
+  const upcomingPayments = React.useMemo(() => [...payments].filter(p => p.status === 'pendiente').sort((a, b) => {
     const dateA = new Date(formatFirebaseDate(a.dueDate || '')).getTime();
     const dateB = new Date(formatFirebaseDate(b.dueDate || '')).getTime();
     return dateA - dateB;
-  }).slice(0, 3);
+  }).slice(0, 3), [payments]);
 
   const getMetricTrend = (id: string) => {
     switch (id) {
