@@ -16,13 +16,34 @@ import { Toaster } from 'sonner';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import ErrorBoundary from './components/ErrorBoundary';
-import { getUserById } from './lib/storage';
+import { getUserById, saveUser } from './lib/storage';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Seed admin user if needed
+    const seedAdmin = async () => {
+      try {
+        const adminEmail = 'admelfaro360@gmail.com';
+        const adminDoc = await getUserById(adminEmail);
+        if (!adminDoc) {
+          console.log('Seeding admin user...');
+          await saveUser({
+            id: adminEmail,
+            username: 'admin',
+            email: adminEmail,
+            role: 'admin',
+            password: 'admin123' // Default password for manual login
+          });
+        }
+      } catch (e) {
+        console.error('Error seeding admin:', e);
+      }
+    };
+    seedAdmin();
+
     // Check for local user session first
     const localUser = localStorage.getItem('kraken_user');
     if (localUser) {
