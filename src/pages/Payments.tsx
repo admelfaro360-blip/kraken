@@ -127,8 +127,8 @@ export default function Payments() {
     setIsDeleteModalOpen(true);
   };
 
-  const totalCollected = payments.filter(p => p.status === 'cobrado').reduce((acc, curr) => acc + curr.amount, 0);
-  const totalPending = payments.filter(p => p.status === 'pendiente').reduce((acc, curr) => acc + curr.amount, 0);
+  const totalCollected = payments.filter(p => p.status === 'cobrado').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalPending = payments.filter(p => p.status === 'pendiente').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -142,7 +142,7 @@ export default function Payments() {
             setPaymentToEdit({ status: 'pendiente', date: new Date().toISOString().split('T')[0], method: 'transferencia' });
             setIsModalOpen(true);
           }}
-          className="px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all flex items-center justify-center gap-2"
+          className="kraken-btn"
         >
           <DollarSign size={20} />
           <span>Nuevo Cobro</span>
@@ -159,7 +159,7 @@ export default function Payments() {
             <TrendingUp size={32} />
           </div>
         </div>
-        <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+        <div className="kraken-card p-8 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Pendiente de Cobro</p>
             <h3 className="text-3xl font-black text-neutral-900 dark:text-white">{totalPending.toFixed(2)} €</h3>
@@ -178,16 +178,16 @@ export default function Payments() {
             placeholder="Buscar por cliente o ID de cobro..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+            className="kraken-input !pl-12"
           />
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">
+        <button className="kraken-btn-secondary">
           <Filter size={20} />
           <span>Filtros</span>
         </button>
       </div>
 
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+      <div className="kraken-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -265,7 +265,7 @@ export default function Payments() {
       {/* Create/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+          <div className="kraken-card w-full max-w-lg overflow-hidden">
             <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-950">
               <h2 className="text-2xl font-bold tracking-tight dark:text-white">
                 {paymentToEdit.id ? 'Editar Cobro' : 'Nuevo Cobro'}
@@ -282,7 +282,7 @@ export default function Payments() {
                     required
                     value={paymentToEdit.clientId || ''}
                     onChange={(e) => setPaymentToEdit({ ...paymentToEdit, clientId: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                    className="kraken-input"
                   >
                     <option value="" className="dark:bg-neutral-900">Seleccionar cliente</option>
                     {clients.map(c => (
@@ -298,7 +298,7 @@ export default function Payments() {
                       placeholder="PR-XXXX"
                       value={paymentToEdit.budgetId || ''}
                       onChange={(e) => setPaymentToEdit({ ...paymentToEdit, budgetId: e.target.value })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div>
@@ -310,7 +310,7 @@ export default function Payments() {
                       placeholder="0.00"
                       value={paymentToEdit.amount || ''}
                       onChange={(e) => setPaymentToEdit({ ...paymentToEdit, amount: Number(e.target.value) })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export default function Payments() {
                       type="date" 
                       value={paymentToEdit.date || ''}
                       onChange={(e) => setPaymentToEdit({ ...paymentToEdit, date: e.target.value })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div>
@@ -330,7 +330,7 @@ export default function Payments() {
                     <select 
                       value={paymentToEdit.method || 'transferencia'}
                       onChange={(e) => setPaymentToEdit({ ...paymentToEdit, method: e.target.value as any })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     >
                       <option value="transferencia" className="dark:bg-neutral-900">Transferencia</option>
                       <option value="efectivo" className="dark:bg-neutral-900">Efectivo</option>
@@ -343,7 +343,7 @@ export default function Payments() {
                   <select 
                     value={paymentToEdit.status || 'pendiente'}
                     onChange={(e) => setPaymentToEdit({ ...paymentToEdit, status: e.target.value as any })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                    className="kraken-input"
                   >
                     <option value="pendiente" className="dark:bg-neutral-900">Pendiente</option>
                     <option value="cobrado" className="dark:bg-neutral-900">Cobrado</option>
@@ -355,13 +355,13 @@ export default function Payments() {
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                  className="flex-1 kraken-btn-secondary"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all"
+                  className="flex-1 kraken-btn"
                 >
                   {paymentToEdit.id ? 'Guardar Cambios' : 'Registrar Cobro'}
                 </button>
@@ -374,7 +374,7 @@ export default function Payments() {
       {/* View Modal */}
       {isViewModalOpen && selectedPayment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+          <div className="kraken-card w-full max-w-lg overflow-hidden">
             <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-950">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight dark:text-white">Detalle del Cobro</h2>
@@ -415,7 +415,7 @@ export default function Payments() {
               <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
                 <button 
                   onClick={() => setIsViewModalOpen(false)}
-                  className="w-full px-6 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold transition-all"
+                  className="w-full kraken-btn"
                 >
                   Cerrar
                 </button>
@@ -428,7 +428,7 @@ export default function Payments() {
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedPayment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+          <div className="kraken-card w-full max-w-md overflow-hidden">
             <div className="p-8 text-center space-y-4">
               <div className="w-16 h-16 bg-kraken-orange/10 text-kraken-orange rounded-full flex items-center justify-center mx-auto">
                 <AlertCircle size={32} />
@@ -442,13 +442,13 @@ export default function Payments() {
               <div className="flex gap-4 pt-4">
                 <button 
                   onClick={() => setIsDeleteModalOpen(false)}
-                  className="flex-1 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                  className="flex-1 kraken-btn-secondary"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={handleDeletePayment}
-                  className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all"
+                  className="flex-1 kraken-btn"
                 >
                   Eliminar
                 </button>
