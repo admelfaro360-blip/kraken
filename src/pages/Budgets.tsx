@@ -273,7 +273,7 @@ export default function Budgets() {
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
     if (sortConfig?.key !== columnKey) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
-    return sortConfig.direction === 'asc' ? <ArrowUp size={12} className="ml-1 text-kraken-orange" /> : <ArrowDown size={12} className="ml-1 text-kraken-orange" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={12} className="ml-1 text-[#FF4D00]" /> : <ArrowDown size={12} className="ml-1 text-[#FF4D00]" />;
   };
 
   return (
@@ -321,7 +321,7 @@ export default function Budgets() {
             <thead>
               <tr className="bg-neutral-50 dark:bg-neutral-950 border-b border-neutral-100 dark:border-neutral-800">
                 <th 
-                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-kraken-orange transition-colors"
+                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-[#FF4D00] transition-colors"
                   onClick={() => handleSort('id')}
                 >
                   <div className="flex items-center">
@@ -367,7 +367,7 @@ export default function Budgets() {
                 <tr key={budget.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 group-hover:bg-kraken-orange/10 group-hover:text-kraken-orange transition-colors">
+                      <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 group-hover:bg-[#FF4D00]/10 group-hover:text-[#FF4D00] transition-colors">
                         <FileText size={18} />
                       </div>
                       <span className="font-bold text-neutral-900 dark:text-white">{budget.id}</span>
@@ -417,7 +417,7 @@ export default function Budgets() {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-kraken-orange" />
+                      <Calendar size={14} className="text-[#FF4D00]" />
                       <input 
                         type="date" 
                         value={budget.startDate || ''}
@@ -470,7 +470,7 @@ export default function Budgets() {
                       </button>
                       <button 
                         onClick={() => setDeleteConfirmation(budget.id)}
-                        className="p-2 text-kraken-orange hover:bg-kraken-orange/10 rounded-lg transition-all" 
+                        className="p-2 text-[#FF4D00] hover:bg-[#FF4D00]/10 rounded-lg transition-all" 
                         title="Eliminar"
                       >
                         <Trash2 size={18} />
@@ -485,8 +485,8 @@ export default function Budgets() {
         <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
           <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Mostrando {sortedBudgets.length} de {budgets.length} presupuestos</p>
           <div className="flex items-center gap-2">
-            <button className="kraken-btn-secondary px-3 py-1 text-xs">Anterior</button>
-            <button className="kraken-btn-secondary px-3 py-1 text-xs">Siguiente</button>
+            <button className="kraken-btn-secondary h-10 px-4 text-xs">Anterior</button>
+            <button className="kraken-btn-secondary h-10 px-4 text-xs">Siguiente</button>
           </div>
         </div>
       </div>
@@ -497,7 +497,7 @@ export default function Budgets() {
           <div className="bg-white dark:bg-neutral-900 w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden transition-colors flex flex-col max-h-[90vh]">
             <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-900 dark:bg-neutral-950 text-white shrink-0">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-kraken-orange mb-2 block">Ficha de Presupuesto</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF4D00] mb-2 block">Ficha de Presupuesto</span>
                 <h2 className="text-3xl font-black tracking-tighter">{selectedBudget.id}</h2>
               </div>
               <button onClick={() => setIsDetailModalOpen(false)} className="p-3 bg-neutral-800 hover:bg-neutral-700 rounded-2xl transition-colors">
@@ -565,7 +565,7 @@ export default function Budgets() {
               <div className="p-8 bg-neutral-900 dark:bg-neutral-950 rounded-[32px] text-white space-y-6 shadow-xl shadow-neutral-900/20 transition-colors">
                 <div className="flex items-center justify-between border-b border-neutral-800 pb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-4 rounded-2xl bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20">
+                    <div className="p-4 rounded-2xl bg-[#FF4D00] text-white shadow-lg shadow-[#FF4D00]/20">
                       <Euro size={28} />
                     </div>
                     <div>
@@ -589,7 +589,7 @@ export default function Budgets() {
                     <span className="font-bold">{(Number(selectedBudget.total) - Number(selectedBudget.subtotal)).toFixed(2)} €</span>
                   </div>
                   <div className="pt-4 border-t border-neutral-800 flex items-center justify-between">
-                    <span className="text-xs font-bold text-kraken-orange uppercase tracking-widest">Total General</span>
+                    <span className="text-xs font-bold text-[#FF4D00] uppercase tracking-widest">Total General</span>
                     <span className="text-2xl font-black text-white">{(Number(selectedBudget.total) || 0).toFixed(2)} €</span>
                   </div>
                 </div>
@@ -597,7 +597,7 @@ export default function Budgets() {
                 <div className="pt-6 border-t border-neutral-800 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Vista Cliente (PDF)</p>
-                    <p className="text-base font-bold text-kraken-orange">
+                    <p className="text-base font-bold text-[#FF4D00]">
                       {(Number(selectedBudget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
                     </p>
                   </div>
@@ -619,7 +619,7 @@ export default function Budgets() {
               <div className="flex justify-center">
                 <button 
                   onClick={() => setIsHelpModalOpen(true)}
-                  className="flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-kraken-orange transition-colors uppercase tracking-widest"
+                  className="flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-[#FF4D00] transition-colors uppercase tracking-widest"
                 >
                   <Info size={14} />
                   <span>Ver Ayuda Memoria (Fórmulas Internas)</span>
@@ -657,7 +657,7 @@ export default function Budgets() {
       {isHelpModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden">
-            <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-kraken-orange text-white">
+            <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-[#FF4D00] text-white">
               <div className="flex items-center gap-3">
                 <Info size={24} />
                 <h2 className="text-2xl font-black tracking-tighter">Ayuda Memoria: Fórmulas</h2>
@@ -668,7 +668,7 @@ export default function Budgets() {
             </div>
             <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh]">
               <section className="space-y-3">
-                <h3 className="font-bold text-kraken-orange uppercase text-xs tracking-widest">1. Mano de Obra (MO)</h3>
+                <h3 className="font-bold text-[#FF4D00] uppercase text-xs tracking-widest">1. Mano de Obra (MO)</h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   Calculado por fase: <br/>
                   <code className="bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded font-bold text-neutral-900 dark:text-white">
@@ -678,7 +678,7 @@ export default function Budgets() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="font-bold text-kraken-orange uppercase text-xs tracking-widest">2. Estructura</h3>
+                <h3 className="font-bold text-[#FF4D00] uppercase text-xs tracking-widest">2. Estructura</h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   Costos fijos mensuales (Seguros, Gestoría, Mantenimiento Furgón) divididos por 24 días hábiles. <br/>
                   <code className="bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded font-bold text-neutral-900 dark:text-white">
@@ -688,21 +688,21 @@ export default function Budgets() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="font-bold text-kraken-orange uppercase text-xs tracking-widest">3. Traslado</h3>
+                <h3 className="font-bold text-[#FF4D00] uppercase text-xs tracking-widest">3. Traslado</h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   Costo base según zona (1 a 4) multiplicado por los días de trabajo, más extras de traslado por fase.
                 </p>
               </section>
 
               <section className="space-y-3">
-                <h3 className="font-bold text-kraken-orange uppercase text-xs tracking-widest">4. Garantía (8%)</h3>
+                <h3 className="font-bold text-[#FF4D00] uppercase text-xs tracking-widest">4. Garantía (8%)</h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   Se aplica la Garantía (8% por defecto) sobre la suma de MO + Estructura + Traslado para cubrir imprevistos.
                 </p>
               </section>
 
               <section className="space-y-3">
-                <h3 className="font-bold text-kraken-orange uppercase text-xs tracking-widest">5. Margen y Materiales</h3>
+                <h3 className="font-bold text-[#FF4D00] uppercase text-xs tracking-widest">5. Margen y Materiales</h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   <strong>Margen:</strong> Se aplica el % seleccionado sobre el costo total del servicio. <br/>
                   <strong>Materiales:</strong> Costo real + 25% de recargo comercial.
@@ -723,7 +723,7 @@ export default function Budgets() {
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in fade-in zoom-in duration-200 border border-neutral-100 dark:border-neutral-800">
-            <div className="w-16 h-16 bg-kraken-orange/10 text-kraken-orange rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-[#FF4D00]/10 text-[#FF4D00] rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle size={32} />
             </div>
             <h3 className="text-xl font-bold text-center mb-2 dark:text-white">¿Eliminar Presupuesto?</h3>
@@ -739,7 +739,7 @@ export default function Budgets() {
               </button>
               <button 
                 onClick={() => handleDeleteBudget(deleteConfirmation)}
-                className="kraken-btn flex-1 py-3 bg-kraken-orange"
+                className="kraken-btn flex-1 py-3"
               >
                 Eliminar
               </button>
