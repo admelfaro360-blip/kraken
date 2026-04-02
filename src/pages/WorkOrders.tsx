@@ -193,7 +193,8 @@ export default function WorkOrders() {
         clientPhone: selectedBudget?.clientPhone,
         clientAddress: selectedBudget?.clientAddress,
         clientId: selectedBudget?.clientId || '1',
-        phases: selectedBudget?.phases || []
+        phases: selectedBudget?.phases || [],
+        createdAt: new Date().toISOString()
       };
       setWorkOrders([order, ...workOrders]);
       await saveWorkOrder(order);
@@ -247,7 +248,7 @@ export default function WorkOrders() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all flex items-center justify-center gap-2"
+          className="kraken-btn"
         >
           <CheckCircle2 size={20} />
           <span>Nueva Orden</span>
@@ -262,10 +263,10 @@ export default function WorkOrders() {
             placeholder="Buscar por cliente, ID o descripción..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+            className="kraken-input !pl-12"
           />
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">
+        <button className="kraken-btn-secondary">
           <Filter size={20} />
           <span>Filtros</span>
         </button>
@@ -273,7 +274,7 @@ export default function WorkOrders() {
 
       <div className="grid grid-cols-1 gap-4">
         {filteredOrders.map((order) => (
-          <div key={order.id} className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 hover:shadow-md transition-all group flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div key={order.id} className="kraken-card p-6 hover:shadow-md group flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4 flex-1">
               <div className={cn(
                 "p-4 rounded-2xl",
@@ -394,7 +395,7 @@ export default function WorkOrders() {
                         description: budget ? budget.description : newOrder.description
                       });
                     }}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                    className="kraken-input"
                   >
                     <option value="" className="dark:bg-neutral-900">Seleccionar presupuesto</option>
                     {availableBudgets.map(b => (
@@ -417,7 +418,7 @@ export default function WorkOrders() {
                     placeholder="Detalles del trabajo..."
                     value={newOrder.description || ''}
                     onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all h-24 resize-none dark:text-white"
+                    className="kraken-input !h-24 !py-4 resize-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -428,7 +429,7 @@ export default function WorkOrders() {
                       type="date" 
                       value={newOrder.startDate || ''}
                       onChange={(e) => setNewOrder({ ...newOrder, startDate: e.target.value })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                   <div>
@@ -439,7 +440,7 @@ export default function WorkOrders() {
                       min="1"
                       value={newOrder.duration || 1}
                       onChange={(e) => setNewOrder({ ...newOrder, duration: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                      className="kraken-input"
                     />
                   </div>
                 </div>
@@ -449,7 +450,7 @@ export default function WorkOrders() {
                     required
                     value={newOrder.crewId || ''}
                     onChange={(e) => setNewOrder({ ...newOrder, crewId: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                    className="kraken-input"
                   >
                     <option value="" className="dark:bg-neutral-900">Seleccionar cuadrilla</option>
                     {AVAILABLE_CREWS.map(crew => (
@@ -464,7 +465,7 @@ export default function WorkOrders() {
                     placeholder="Carlos R., Luis M."
                     value={newOrder.assignedTo?.join(', ') || ''}
                     onChange={(e) => setNewOrder({ ...newOrder, assignedTo: e.target.value.split(',').map(s => s.trim()) })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+                    className="kraken-input"
                   />
                 </div>
                 <div>
@@ -492,7 +493,7 @@ export default function WorkOrders() {
                                     updatedPhases[pIdx].labor[lIdx].assignedPerson = e.target.value;
                                     setNewOrder({ ...newOrder, phases: updatedPhases });
                                   }}
-                                  className="w-full px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:border-kraken-orange outline-none text-xs dark:text-white font-medium"
+                                  className="kraken-input !h-10 !px-3 !rounded-lg text-xs"
                                 />
                               </div>
                             </div>
@@ -511,7 +512,7 @@ export default function WorkOrders() {
                     placeholder="Notas internas o instrucciones especiales..."
                     value={newOrder.notes || ''}
                     onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all h-20 resize-none dark:text-white"
+                    className="kraken-input !h-20 !py-4 resize-none"
                   />
                 </div>
               </div>
@@ -519,13 +520,13 @@ export default function WorkOrders() {
                 <button 
                   type="button"
                   onClick={() => { setIsModalOpen(false); setIsEditing(false); setSelectedOrder(null); }}
-                  className="flex-1 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                  className="flex-1 kraken-btn-secondary"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all"
+                  className="flex-1 kraken-btn"
                 >
                   {isEditing ? 'Guardar Cambios' : 'Crear Orden'}
                 </button>
@@ -537,7 +538,7 @@ export default function WorkOrders() {
 
       {isViewModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800 flex flex-col max-h-[90vh]">
+          <div className="kraken-card w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-950 shrink-0">
               <h2 className="text-2xl font-bold tracking-tight dark:text-white">Detalles de la Orden</h2>
               <button onClick={() => setIsViewModalOpen(false)} className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-full transition-colors dark:text-white">
