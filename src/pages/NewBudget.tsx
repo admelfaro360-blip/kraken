@@ -148,7 +148,7 @@ export default function NewBudget() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-kraken-orange border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-[#FF4D00] border-t-transparent rounded-full animate-spin"></div>
           <p className="text-neutral-500 font-bold animate-pulse">CARGANDO CONFIGURACIÓN...</p>
         </div>
       </div>
@@ -341,7 +341,7 @@ export default function NewBudget() {
             <>
               <div className="kraken-card p-8 space-y-8">
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="p-3 rounded-2xl bg-kraken-orange text-white">
+                  <div className="p-3 rounded-2xl bg-[#FF4D00] text-white">
                     <Users size={24} />
                   </div>
                   <h3 className="text-xl font-bold tracking-tight dark:text-white">Datos del Cliente</h3>
@@ -446,7 +446,7 @@ export default function NewBudget() {
                   <h3 className="text-xl font-bold tracking-tight dark:text-white">Fases del Trabajo</h3>
                   <button 
                     onClick={addPhase}
-                    className="flex items-center gap-2 text-kraken-orange font-bold text-sm hover:text-kraken-orange-hover transition-colors"
+                    className="flex items-center gap-2 text-[#FF4D00] font-bold text-sm hover:text-[#E64500] transition-colors"
                   >
                     <Plus size={18} />
                     <span>Añadir Fase</span>
@@ -458,7 +458,7 @@ export default function NewBudget() {
                       <span className="text-[10px] font-black text-neutral-200 dark:text-neutral-700 uppercase tracking-[0.2em]">Fase {index + 1}</span>
                       <button 
                         onClick={() => removePhase(phase.id)}
-                        className="text-neutral-300 dark:text-neutral-600 hover:text-kraken-orange transition-colors"
+                        className="text-neutral-300 dark:text-neutral-600 hover:text-[#FF4D00] transition-colors"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -479,7 +479,7 @@ export default function NewBudget() {
                           <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Personal Asignado</label>
                           <button 
                             onClick={() => addLabor(phase.id)}
-                            className="text-[10px] font-bold text-kraken-orange hover:text-kraken-orange-hover uppercase tracking-widest"
+                            className="text-[10px] font-bold text-[#FF4D00] hover:text-[#E64500] uppercase tracking-widest"
                           >
                             + Añadir
                           </button>
@@ -548,7 +548,7 @@ export default function NewBudget() {
                 <h3 className="text-xl font-bold tracking-tight dark:text-white">Materiales</h3>
                 <button 
                   onClick={addMaterial}
-                  className="flex items-center gap-2 text-kraken-orange font-bold text-sm hover:text-kraken-orange-hover transition-colors"
+                  className="flex items-center gap-2 text-[#FF4D00] font-bold text-sm hover:text-[#E64500] transition-colors"
                 >
                   <Plus size={18} />
                   <span>Añadir Material</span>
@@ -592,7 +592,7 @@ export default function NewBudget() {
                         </div>
                         <button 
                           onClick={() => removeMaterial(material.id)}
-                          className="p-2 text-neutral-300 dark:text-neutral-600 hover:text-kraken-orange transition-colors mb-1"
+                          className="p-2 text-neutral-300 dark:text-neutral-600 hover:text-[#FF4D00] transition-colors mb-1"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -673,8 +673,8 @@ export default function NewBudget() {
                 <span className="font-bold">{calculation?.minWithoutMargin.toFixed(2)} €</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-kraken-orange font-bold">Margen ({marginPct}%)</span>
-                <span className="text-kraken-orange font-bold">+{calculation?.marginEur.toFixed(2)} €</span>
+                <span className="text-[#FF4D00] font-bold">Margen ({marginPct}%)</span>
+                <span className="text-[#FF4D00] font-bold">+{calculation?.marginEur.toFixed(2)} €</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-neutral-400 font-medium">Materiales Fact.</span>
@@ -695,8 +695,8 @@ export default function NewBudget() {
                   <span className="text-xl font-black text-white">{(calculation?.subtotal + calculation?.iva).toFixed(2)} €</span>
                 </div>
                 <div className="flex items-center justify-between pt-4">
-                  <span className="text-[10px] font-bold tracking-tight uppercase text-kraken-orange">VISTA CLIENTE (PDF)</span>
-                  <span className="text-lg font-black text-kraken-orange">{calculation?.subtotal.toFixed(2)} € + IVA</span>
+                  <span className="text-[10px] font-bold tracking-tight uppercase text-[#FF4D00]">VISTA CLIENTE (PDF)</span>
+                  <span className="text-lg font-black text-[#FF4D00]">{calculation?.subtotal.toFixed(2)} € + IVA</span>
                 </div>
               </div>
             </div>
