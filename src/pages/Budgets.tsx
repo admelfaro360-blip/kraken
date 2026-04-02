@@ -81,7 +81,8 @@ export default function Budgets() {
           address: sb.clientAddress || 'N/A',
           vertical: sb.clientVertical || 'hogar',
           date: new Date(formatFirebaseDate(sb.date)),
-          total: Number(sb.total) || 0
+          subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
+          total: Number(sb.total || sb.calculation?.total) || 0
         }));
 
         setBudgets(formattedBudgets);
@@ -96,6 +97,43 @@ export default function Budgets() {
     await deleteStoredBudget(id);
     setBudgets(budgets.filter(b => b.id !== id));
     setDeleteConfirmation(null);
+  };
+
+  const handleDuplicateBudget = async (budget: any) => {
+    try {
+      const newId = 'PR-' + Math.floor(1000 + Math.random() * 9000);
+      
+      // Create a clean copy for saving, removing UI-only fields added during formatting
+      const { client, phone, address, vertical, date, ...rest } = budget;
+      
+      const duplicatedBudget = {
+        ...rest,
+        id: newId,
+        date: new Date().toISOString(),
+        status: 'borrador'
+      };
+      
+      await saveBudget(duplicatedBudget as any);
+      
+      // Refresh list
+      const stored = await fetchBudgets();
+      const formattedBudgets = stored.map((sb: any) => ({
+        ...sb,
+        client: sb.clientName || sb.clientId || 'Cliente',
+        phone: sb.clientPhone || 'N/A',
+        address: sb.clientAddress || 'N/A',
+        vertical: sb.clientVertical || 'hogar',
+        date: new Date(formatFirebaseDate(sb.date)),
+        subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
+        total: Number(sb.total || sb.calculation?.total) || 0
+      }));
+      setBudgets(formattedBudgets);
+      
+      toast.success(`Presupuesto duplicado con éxito: ${newId}`);
+    } catch (error) {
+      console.error('Error duplicating budget:', error);
+      toast.error('Error al duplicar el presupuesto');
+    }
   };
 
   useEffect(() => {
@@ -186,9 +224,9 @@ export default function Budgets() {
 
   const downloadBudgetPDF = async (budget: any, formatType: 'pc' | 'mobile' = 'pc', shouldPrint: boolean = false) => {
     try {
-      const safeTotal = Number(budget.total) || 0;
-      const subtotal = budget.subtotal || (safeTotal / 1.23);
-      const iva = safeTotal - subtotal;
+      const subtotal = Number(budget.subtotal) || 0;
+      const total = Number(budget.total) || 0;
+      const iva = total - subtotal;
       
       const dateStr = formatFirebaseDate(budget.date);
       const safeDate = new Date(dateStr);
@@ -206,7 +244,7 @@ export default function Budgets() {
         description: budget.description || 'Sin descripción',
         calculation: {
           subtotal: subtotal,
-          total: subtotal + iva,
+          total: total,
           iva: iva,
           moTotal: 0,
           structureTotal: 0,
@@ -245,7 +283,7 @@ export default function Budgets() {
           <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 dark:text-white">Presupuestos</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Gestiona y crea propuestas comerciales profesionales.</p>
         </div>
-        <Link to="/presupuestos/nuevo" className="flex items-center justify-center gap-2 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20">
+        <Link to="/presupuestos/nuevo" className="kraken-btn flex items-center justify-center gap-2 px-6 py-3">
           <Plus size={20} />
           <span>Nuevo Presupuesto</span>
         </Link>
@@ -259,17 +297,17 @@ export default function Budgets() {
             placeholder="Buscar por cliente, número o descripción..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+            className="kraken-input w-full pl-12"
           />
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">
+          <button className="kraken-btn-secondary flex-1 flex items-center justify-center gap-2 px-4 py-3">
             <Filter size={20} />
             <span>Filtros</span>
           </button>
           <button 
             onClick={exportToPDF}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-neutral-900 dark:bg-neutral-950 text-white rounded-xl font-bold hover:bg-neutral-800 dark:hover:bg-neutral-800 transition-all border border-transparent dark:border-neutral-800"
+            className="kraken-btn-secondary flex items-center justify-center gap-2 px-4 py-3"
             title="Exportar Listado a PDF"
           >
             <Download size={20} />
@@ -277,7 +315,7 @@ export default function Budgets() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+      <div className="kraken-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -349,7 +387,7 @@ export default function Budgets() {
                   </td>
                   <td className="px-6 py-5">
                     <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                      {(Number(budget.subtotal || (budget.total / 1.23)) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
+                      {(Number(budget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
                     </span>
                   </td>
                   <td className="px-6 py-5">
@@ -378,24 +416,20 @@ export default function Budgets() {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    {budget.status === 'aprobado' || budget.status === 'ejecucion' ? (
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-kraken-orange" />
-                        <input 
-                          type="date" 
-                          value={budget.startDate || ''}
-                          onChange={async (e) => {
-                            const newDate = e.target.value;
-                            const updatedBudget = { ...budget, startDate: newDate };
-                            setBudgets(budgets.map(b => b.id === budget.id ? updatedBudget : b));
-                            await saveBudget(updatedBudget);
-                          }}
-                          className="bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:ring-2 focus:ring-kraken-orange/20 dark:text-white"
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-xs text-neutral-400 italic">No aprobado</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} className="text-kraken-orange" />
+                      <input 
+                        type="date" 
+                        value={budget.startDate || ''}
+                        onChange={async (e) => {
+                          const newDate = e.target.value;
+                          const updatedBudget = { ...budget, startDate: newDate };
+                          setBudgets(budgets.map(b => b.id === budget.id ? updatedBudget : b));
+                          await saveBudget(updatedBudget);
+                        }}
+                        className="kraken-input px-2 py-1 text-xs font-bold"
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -428,6 +462,13 @@ export default function Budgets() {
                         <Download size={18} />
                       </button>
                       <button 
+                        onClick={() => handleDuplicateBudget(budget)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" 
+                        title="Duplicar"
+                      >
+                        <Copy size={18} />
+                      </button>
+                      <button 
                         onClick={() => setDeleteConfirmation(budget.id)}
                         className="p-2 text-kraken-orange hover:bg-kraken-orange/10 rounded-lg transition-all" 
                         title="Eliminar"
@@ -444,8 +485,8 @@ export default function Budgets() {
         <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
           <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Mostrando {sortedBudgets.length} de {budgets.length} presupuestos</p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-bold disabled:opacity-50 dark:text-white">Anterior</button>
-            <button className="px-3 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-bold dark:text-white">Siguiente</button>
+            <button className="kraken-btn-secondary px-3 py-1 text-xs">Anterior</button>
+            <button className="kraken-btn-secondary px-3 py-1 text-xs">Siguiente</button>
           </div>
         </div>
       </div>
@@ -541,11 +582,11 @@ export default function Budgets() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-neutral-400 font-medium">Subtotal</span>
-                    <span className="font-bold">{(Number(selectedBudget.subtotal) || (selectedBudget.total / 1.23)).toFixed(2)} €</span>
+                    <span className="font-bold">{(Number(selectedBudget.subtotal) || 0).toFixed(2)} €</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-neutral-400 font-medium">IVA (23%)</span>
-                    <span className="font-bold">{(Number(selectedBudget.total - (selectedBudget.subtotal || (selectedBudget.total / 1.23)))).toFixed(2)} €</span>
+                    <span className="font-bold">{(Number(selectedBudget.total) - Number(selectedBudget.subtotal)).toFixed(2)} €</span>
                   </div>
                   <div className="pt-4 border-t border-neutral-800 flex items-center justify-between">
                     <span className="text-xs font-bold text-kraken-orange uppercase tracking-widest">Total General</span>
@@ -557,7 +598,7 @@ export default function Budgets() {
                   <div>
                     <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Vista Cliente (PDF)</p>
                     <p className="text-base font-bold text-kraken-orange">
-                      {(Number(selectedBudget.subtotal || (selectedBudget.total / 1.23)) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
+                      {(Number(selectedBudget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
                     </p>
                   </div>
                   <div className="text-right">
@@ -565,7 +606,7 @@ export default function Budgets() {
                     <select 
                       value={selectedBudget.language || 'es'}
                       onChange={(e) => handleLanguageChange(e.target.value as any)}
-                      className="bg-neutral-800 border border-neutral-700 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer text-white"
+                      className="kraken-input px-2 py-1 text-xs font-bold"
                     >
                       <option value="es">Español</option>
                       <option value="pt">Português</option>
@@ -588,21 +629,21 @@ export default function Budgets() {
               <div className="grid grid-cols-3 gap-4 pt-4 sticky bottom-0 bg-white dark:bg-neutral-900 pb-2">
                 <button 
                   onClick={() => downloadBudgetPDF(selectedBudget, 'pc', true)}
-                  className="px-8 py-4 border border-neutral-200 dark:border-neutral-700 rounded-2xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all flex items-center justify-center gap-2"
+                  className="kraken-btn-secondary px-8 py-4 flex items-center justify-center gap-2"
                 >
                   <Printer size={20} />
                   <span>Imprimir</span>
                 </button>
                 <button 
                   onClick={() => downloadBudgetPDF(selectedBudget, 'pc')}
-                  className="px-8 py-4 border border-neutral-200 dark:border-neutral-700 rounded-2xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all flex items-center justify-center gap-2"
+                  className="kraken-btn-secondary px-8 py-4 flex items-center justify-center gap-2"
                 >
                   <Download size={20} />
                   <span>PDF Desktop</span>
                 </button>
                 <button 
                   onClick={() => downloadBudgetPDF(selectedBudget, 'mobile')}
-                  className="px-8 py-4 bg-kraken-orange text-white rounded-2xl font-bold shadow-lg shadow-kraken-orange/20 hover:bg-kraken-orange-hover transition-all flex items-center justify-center gap-2"
+                  className="kraken-btn px-8 py-4 flex items-center justify-center gap-2"
                 >
                   <Smartphone size={20} />
                   <span>PDF Mobile</span>
@@ -692,13 +733,13 @@ export default function Budgets() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setDeleteConfirmation(null)}
-                className="flex-1 px-6 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                className="kraken-btn-secondary flex-1 py-3"
               >
                 Cancelar
               </button>
               <button 
                 onClick={() => handleDeleteBudget(deleteConfirmation)}
-                className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                className="kraken-btn flex-1 py-3 bg-kraken-orange"
               >
                 Eliminar
               </button>
