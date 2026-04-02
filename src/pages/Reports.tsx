@@ -24,7 +24,7 @@ import {
   TrendingDown,
   Info
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatFirebaseDate } from '../lib/utils';
 import { 
   BarChart, 
   Bar, 
@@ -64,12 +64,15 @@ export default function Reports() {
   const [config, setConfig] = useState<BusinessConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const years = ['2024', '2025', '2026', '2027'];
+
   // Filter State (Persisted)
   const [period, setPeriod] = useState<'mensual' | 'anual'>(() => 
     (localStorage.getItem('reports_period') as any) || 'mensual'
   );
   const [selectedMonth, setSelectedMonth] = useState(() => 
-    localStorage.getItem('reports_month') || format(new Date(), 'MMMM', { locale: es })
+    localStorage.getItem('reports_month') || months[new Date().getMonth()]
   );
   const [selectedYear, setSelectedYear] = useState(() => 
     localStorage.getItem('reports_year') || format(new Date(), 'yyyy')
@@ -106,11 +109,6 @@ export default function Reports() {
     localStorage.setItem('reports_month', selectedMonth);
     localStorage.setItem('reports_year', selectedYear);
   }, [period, selectedMonth, selectedYear]);
-
-  const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const years = ['2024', '2025', '2026', '2027'];
-
-  // Helper para normalizar fechas a local (evita bug de fin de mes UTC)
   const parseLocalDate = (dateString: string) => {
     if (!dateString) return new Date();
     // Si es un ISO string completo, extraemos solo la parte de la fecha
@@ -124,9 +122,10 @@ export default function Reports() {
     const monthIdx = months.indexOf(selectedMonth);
     const yearNum = parseInt(selectedYear);
 
-    const filterByDate = (dateStr: string) => {
-      if (!dateStr) return false;
+    const filterByDate = (rawDate: any) => {
+      if (!rawDate) return false;
       try {
+        const dateStr = formatFirebaseDate(rawDate);
         const localDate = parseLocalDate(dateStr);
         if (period === 'anual') {
           return localDate.getFullYear() === yearNum;
@@ -139,9 +138,9 @@ export default function Reports() {
     };
 
     return {
-      budgets: budgets.filter(b => filterByDate(b.date)),
+      budgets: budgets.filter(b => filterByDate(b.date || b.startDate || b.createdAt)),
       workOrders: workOrders.filter(wo => filterByDate(wo.createdAt || wo.startDate || '')),
-      payments: payments.filter(p => filterByDate(p.date)),
+      payments: payments.filter(p => filterByDate(p.date || p.createdAt)),
     };
   }, [budgets, workOrders, payments, period, selectedMonth, selectedYear]);
 
@@ -170,17 +169,18 @@ export default function Reports() {
         calc = calculateBudget(b.phases, b.materials, config, client?.zone || 1, b.marginPct);
       }
 
-      // Fallback a 0 para evitar NaN o undefined
-      moTotal += calc?.moTotal || 0;
-      structureTotal += calc?.structureTotal || 0;
-      transportTotal += calc?.transportTotal || 0;
-      guarantee += calc?.guarantee || 0;
-      minWithoutMargin += calc?.minWithoutMargin || 0;
-      marginEur += calc?.marginEur || 0;
-      materialsFactured += calc?.materialsFactured || 0;
-      subtotal += calc?.subtotal || 0;
-      iva += calc?.iva || 0;
-      total += calc?.total || 0;
+      // Fallback a 0 para evitar NaN o undefined, asegurando conversión a número
+      moTotal += Number(calc?.moTotal || 0);
+      structureTotal += Number(calc?.structureTotal || 0);
+      transportTotal += Number(calc?.transportTotal || 0);
+      guarantee += Number(calc?.guarantee || 0);
+      minWithoutMargin += Number(calc?.minWithoutMargin || 0);
+      marginEur += Number(calc?.marginEur || 0);
+      materialsFactured += Number(calc?.materialsFactured || 0);
+      subtotal += Number(calc?.subtotal || 0);
+      iva += Number(calc?.iva || 0);
+      // Priorizar el total calculado, pero usar b.total como fallback si calc no existe
+      total += Number(calc?.total || b.total || 0);
     });
 
     const totalCobrado = filteredData.payments
