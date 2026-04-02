@@ -283,7 +283,7 @@ export default function Budgets() {
           <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 dark:text-white">Presupuestos</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Gestiona y crea propuestas comerciales profesionales.</p>
         </div>
-        <Link to="/presupuestos/nuevo" className="kraken-btn flex items-center justify-center gap-2 px-6 py-3">
+        <Link to="/presupuestos/nuevo" className="kraken-btn">
           <Plus size={20} />
           <span>Nuevo Presupuesto</span>
         </Link>
