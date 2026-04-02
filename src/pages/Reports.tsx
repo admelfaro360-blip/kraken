@@ -111,9 +111,11 @@ export default function Reports() {
   const years = ['2024', '2025', '2026', '2027'];
 
   // Helper para normalizar fechas a local (evita bug de fin de mes UTC)
-  const getLocalDate = (dateString: string) => {
+  const parseLocalDate = (dateString: string) => {
     if (!dateString) return new Date();
-    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+    // Si es un ISO string completo, extraemos solo la parte de la fecha
+    const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+    const [year, month, day] = datePart.split('-').map(Number);
     return new Date(year, month - 1, day);
   };
 
@@ -125,7 +127,7 @@ export default function Reports() {
     const filterByDate = (dateStr: string) => {
       if (!dateStr) return false;
       try {
-        const localDate = getLocalDate(dateStr);
+        const localDate = parseLocalDate(dateStr);
         if (period === 'anual') {
           return localDate.getFullYear() === yearNum;
         } else {
@@ -168,18 +170,17 @@ export default function Reports() {
         calc = calculateBudget(b.phases, b.materials, config, client?.zone || 1, b.marginPct);
       }
 
-      if (calc) {
-        moTotal += calc.moTotal || 0;
-        structureTotal += calc.structureTotal || 0;
-        transportTotal += calc.transportTotal || 0;
-        guarantee += calc.guarantee || 0;
-        minWithoutMargin += calc.minWithoutMargin || 0;
-        marginEur += calc.marginEur || 0;
-        materialsFactured += calc.materialsFactured || 0;
-        subtotal += calc.subtotal || 0;
-        iva += calc.iva || 0;
-        total += calc.total || 0;
-      }
+      // Fallback a 0 para evitar NaN o undefined
+      moTotal += calc?.moTotal || 0;
+      structureTotal += calc?.structureTotal || 0;
+      transportTotal += calc?.transportTotal || 0;
+      guarantee += calc?.guarantee || 0;
+      minWithoutMargin += calc?.minWithoutMargin || 0;
+      marginEur += calc?.marginEur || 0;
+      materialsFactured += calc?.materialsFactured || 0;
+      subtotal += calc?.subtotal || 0;
+      iva += calc?.iva || 0;
+      total += calc?.total || 0;
     });
 
     const totalCobrado = filteredData.payments
@@ -247,7 +248,7 @@ export default function Reports() {
     
     const allWorkOrders = workOrders.filter(wo => {
       try {
-        const localDate = getLocalDate(wo.createdAt || wo.startDate || '');
+        const localDate = parseLocalDate(wo.createdAt || wo.startDate || '');
         return localDate.getFullYear() === parseInt(selectedYear);
       } catch (e) {
         return false;
@@ -256,7 +257,7 @@ export default function Reports() {
 
     allWorkOrders.forEach(wo => {
       try {
-        const localDate = getLocalDate(wo.createdAt || wo.startDate || '');
+        const localDate = parseLocalDate(wo.createdAt || wo.startDate || '');
         const monthLabel = months[localDate.getMonth()].substring(0, 3);
         volumeMap[monthLabel]++;
       } catch (e) {}
