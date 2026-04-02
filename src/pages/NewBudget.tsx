@@ -300,10 +300,16 @@ export default function NewBudget() {
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Paso {step} de 3: {step === 1 ? 'Configuración y Fases' : step === 2 ? 'Materiales' : 'Resumen y Finalizar'}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate('/presupuestos')}
+            className="kraken-btn-secondary"
+          >
+            <span>Cancelar</span>
+          </button>
           {step > 1 && (
             <button 
               onClick={() => setStep(step - 1)}
-              className="kraken-btn-secondary flex items-center gap-2"
+              className="kraken-btn-secondary"
             >
               <ChevronLeft size={20} />
               <span>Anterior</span>
@@ -312,7 +318,7 @@ export default function NewBudget() {
           {step < 3 ? (
             <button 
               onClick={() => setStep(step + 1)}
-              className="kraken-btn flex items-center gap-2"
+              className="kraken-btn"
             >
               <span>Siguiente</span>
               <ChevronRight size={20} />
@@ -320,7 +326,7 @@ export default function NewBudget() {
           ) : (
             <button 
               onClick={handleSave}
-              className="kraken-btn flex items-center gap-2"
+              className="kraken-btn"
             >
               <Save size={20} />
               <span>Guardar Presupuesto</span>
