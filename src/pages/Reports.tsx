@@ -4,6 +4,12 @@ import {
   TrendingUp, 
   Download, 
   Calculator,
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  MoreHorizontal,
+  ArrowRight,
+  FileText,
   Euro,
   Users,
   Briefcase,
@@ -176,6 +182,10 @@ export default function Reports() {
       }
     });
 
+    const totalCobrado = filteredData.payments
+      .filter(p => p.status === 'cobrado')
+      .reduce((acc, p) => acc + Number(p.amount || 0), 0);
+
     const ticketPromedio = relevantBudgets.length > 0 ? total / relevantBudgets.length : 0;
 
     return {
@@ -189,10 +199,11 @@ export default function Reports() {
       subtotal,
       iva,
       total,
+      totalCobrado,
       ticketPromedio,
       count: relevantBudgets.length
     };
-  }, [filteredData.budgets, config, clients]);
+  }, [filteredData.budgets, filteredData.payments, config, clients]);
 
   // Chart Data Preparation
   const chartData = useMemo(() => {
@@ -270,11 +281,11 @@ export default function Reports() {
 
     filteredData.payments.forEach(p => {
       const status = p.status === 'pendiente' ? 'Pendiente' : p.status === 'cobrado' ? 'Cobrado' : 'Parcial';
-      statusMap[status] += p.amount;
+      statusMap[status] += Number(p.amount || 0);
       
       if (p.method) {
         const method = p.method.charAt(0).toUpperCase() + p.method.slice(1);
-        methodMap[method] = (methodMap[method] || 0) + p.amount;
+        methodMap[method] = (methodMap[method] || 0) + Number(p.amount || 0);
       }
     });
 
@@ -311,6 +322,7 @@ export default function Reports() {
     { label: 'Subtotal', value: metrics.subtotal, icon: Euro, color: 'neutral' },
     { label: 'I.V.A', value: metrics.iva, icon: Receipt, color: 'neutral' },
     { label: 'Total Facturado', value: metrics.total, icon: CreditCard, color: 'green' },
+    { label: 'Total Cobrado', value: metrics.totalCobrado, icon: CheckCircle2, color: 'green' },
     { label: 'Ticket Promedio', value: metrics.ticketPromedio, icon: TrendingUp, color: 'orange' },
   ];
 
