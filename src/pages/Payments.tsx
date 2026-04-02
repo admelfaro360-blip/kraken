@@ -15,7 +15,8 @@ import {
   X,
   Eye,
   Edit2,
-  Trash2
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { Payment, Client, Budget } from '../types';
 import { format } from 'date-fns';
@@ -144,7 +145,7 @@ export default function Payments() {
           }}
           className="kraken-btn"
         >
-          <DollarSign size={20} />
+          <Plus size={20} />
           <span>Nuevo Cobro</span>
         </button>
       </header>
