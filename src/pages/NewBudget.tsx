@@ -303,7 +303,7 @@ export default function NewBudget() {
           {step > 1 && (
             <button 
               onClick={() => setStep(step - 1)}
-              className="kraken-btn-secondary"
+              className="kraken-btn-secondary flex items-center gap-2"
             >
               <ChevronLeft size={20} />
               <span>Anterior</span>
@@ -312,7 +312,7 @@ export default function NewBudget() {
           {step < 3 ? (
             <button 
               onClick={() => setStep(step + 1)}
-              className="kraken-btn"
+              className="kraken-btn flex items-center gap-2"
             >
               <span>Siguiente</span>
               <ChevronRight size={20} />
@@ -320,7 +320,7 @@ export default function NewBudget() {
           ) : (
             <button 
               onClick={handleSave}
-              className="kraken-btn"
+              className="kraken-btn flex items-center gap-2"
             >
               <Save size={20} />
               <span>Guardar Presupuesto</span>
@@ -340,10 +340,9 @@ export default function NewBudget() {
                   </div>
                   <h3 className="text-xl font-bold tracking-tight dark:text-white">Datos del Cliente</h3>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Seleccionar Cliente Existente (Opcional)</label>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Seleccionar Cliente Existente (Opcional)</label>
                     <select 
                       value={clients.find(c => c.name === clientInfo.name)?.id || ''}
                       onChange={(e) => handleClientSelect(e.target.value)}
@@ -355,8 +354,8 @@ export default function NewBudget() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Nombre / Razón Social</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Nombre / Razón Social</label>
                     <input 
                       type="text" 
                       value={clientInfo.name}
@@ -365,8 +364,8 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Teléfono / Celular</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Teléfono / Celular</label>
                     <input 
                       type="text" 
                       value={clientInfo.phone}
@@ -375,8 +374,8 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Dirección del Trabajo</label>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Dirección del Trabajo</label>
                     <input 
                       type="text" 
                       value={clientInfo.address}
@@ -385,8 +384,8 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Vertical</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Vertical</label>
                     <select 
                       value={clientInfo.vertical}
                       onChange={(e) => setClientInfo({ ...clientInfo, vertical: e.target.value as any })}
@@ -396,23 +395,23 @@ export default function NewBudget() {
                       <option value="industria">Industria (Corporativo)</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Idioma Presupuesto</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Idioma Presupuesto</label>
                     <select 
                       value={clientInfo.language}
                       onChange={(e) => setClientInfo({ ...clientInfo, language: e.target.value as any })}
                       className="kraken-input"
                     >
                       <option value="es">Español</option>
-                      <option value="pt">Portugués</option>
+                      <option value="pt">Português</option>
                       <option value="en">Inglés</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Zona de Traslado</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Zona de Traslado</label>
                     <select 
                       value={clientZone}
                       onChange={(e) => setClientZone(Number(e.target.value))}
@@ -424,8 +423,8 @@ export default function NewBudget() {
                       <option value={4}>Zona 4 (30 €)</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Margen de Ganancia (%)</label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Margen de Ganancia (%)</label>
                     <input 
                       type="number" 
                       value={marginPct}
@@ -604,7 +603,7 @@ export default function NewBudget() {
               <div className="kraken-card p-8 space-y-8">
                 <h3 className="text-xl font-bold tracking-tight dark:text-white">Resumen y Notas Finales</h3>
                 <div className="space-y-4">
-                  <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Descripción del Trabajo (Visible al Cliente)</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Descripción del Trabajo (Visible al Cliente)</label>
                   <textarea 
                     rows={4}
                     value={description}
@@ -614,7 +613,7 @@ export default function NewBudget() {
                   />
                 </div>
                 <div className="space-y-4">
-                  <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Observaciones Internas (Privado)</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Observaciones Internas (Privado)</label>
                   <textarea 
                     rows={3}
                     value={internalNotes}
