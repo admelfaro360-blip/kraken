@@ -118,6 +118,7 @@ export default function Dashboard() {
 
   const [metrics, setMetrics] = React.useState({
     totalFacturado: 0,
+    totalSinIVA: 0,
     totalBudgets: 0,
     approvalRate: 0,
     uniqueClients: 0,
@@ -163,6 +164,7 @@ export default function Dashboard() {
   // Widget visibility state
   const [visibleWidgets, setVisibleWidgets] = React.useState({
     facturado: true,
+    facturado_sin_iva: true,
     presupuestos: true,
     aprobacion: true,
     clientes: true,
@@ -178,12 +180,13 @@ export default function Dashboard() {
 
   // Card slot assignments
   const [cardSlots, setCardSlots] = React.useState([
-    'facturado', 'presupuestos', 'aprobacion', 'clientes',
-    'iva', 'ganancia', 'gastos_estructura', 'gastos_mo'
+    'facturado', 'facturado_sin_iva', 'presupuestos', 'aprobacion',
+    'iva', 'ganancia', 'gastos_estructura', 'gastos_mo', 'clientes'
   ]);
 
   const allMetrics = [
-    { id: 'facturado', label: 'Total Facturado', icon: Euro, color: 'orange' },
+    { id: 'facturado', label: 'Total Facturado con IVA', icon: Euro, color: 'orange' },
+    { id: 'facturado_sin_iva', label: 'Total Facturado sin IVA', icon: Wallet, color: 'neutral' },
     { id: 'presupuestos', label: 'Presupuestos', icon: FileCheck, color: 'orange' },
     { id: 'aprobacion', label: 'Tasa Aprobación', icon: TrendingUp, color: 'orange' },
     { id: 'clientes', label: 'Clientes Únicos', icon: Users, color: 'orange' },
@@ -237,6 +240,7 @@ export default function Dashboard() {
 
     // 1. TOTAL FACTURADO: Sumatoria del 'Total General' de presupuestos aprobados
     const totalFacturado = approvedBudgets.reduce((acc, b) => acc + (b.total || 0), 0);
+    const totalSinIVA = approvedBudgets.reduce((acc, b) => acc + (b.subtotal || 0), 0);
 
     // 2. PRESUPUESTOS: Conteo total del mes
     const totalBudgetsCount = filteredBudgets.length;
@@ -271,6 +275,7 @@ export default function Dashboard() {
 
     setMetrics({
       totalFacturado,
+      totalSinIVA,
       totalBudgets: totalBudgetsCount,
       approvalRate,
       uniqueClients: uniqueClientsCount,
@@ -285,6 +290,7 @@ export default function Dashboard() {
   const getMetricValue = (id: string) => {
     switch (id) {
       case 'facturado': return metrics.totalFacturado.toLocaleString('de-DE') + ' €';
+      case 'facturado_sin_iva': return metrics.totalSinIVA.toLocaleString('de-DE') + ' €';
       case 'presupuestos': return metrics.totalBudgets.toString();
       case 'aprobacion': return Math.round(metrics.approvalRate) + '%';
       case 'clientes': return metrics.uniqueClients.toString();
@@ -459,30 +465,13 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cardSlots.slice(0, 4).map((metricId, index) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {cardSlots.map((metricId, index) => {
           const metric = allMetrics.find(m => m.id === metricId);
           if (!metric || !visibleWidgets[metricId as keyof typeof visibleWidgets]) return null;
           return (
             <StatCard 
               key={`slot-${index}`}
-              title={metric.label} 
-              value={getMetricValue(metricId)} 
-              icon={metric.icon} 
-              trend={getMetricTrend(metricId)} 
-              color={metric.color}
-            />
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cardSlots.slice(4, 8).map((metricId, index) => {
-          const metric = allMetrics.find(m => m.id === metricId);
-          if (!metric || !visibleWidgets[metricId as keyof typeof visibleWidgets]) return null;
-          return (
-            <StatCard 
-              key={`slot-${index + 4}`}
               title={metric.label} 
               value={getMetricValue(metricId)} 
               icon={metric.icon} 
