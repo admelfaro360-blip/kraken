@@ -15,7 +15,9 @@ import {
   X,
   AlertCircle,
   CreditCard,
-  Briefcase
+  Briefcase,
+  Target,
+  Zap
 } from 'lucide-react';
 import { 
   format, 
