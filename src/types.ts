@@ -83,6 +83,8 @@ export interface Budget {
   internalNotes?: string;
   startDate?: string;
   marginPct: number;
+  includeIVA: boolean;
+  calculation?: CalculationResult;
   subtotal?: number;
   total?: number;
   createdAt?: string;
@@ -137,9 +139,13 @@ export interface Payment {
 
 export interface Expense {
   id: string;
-  category: 'fijo' | 'mano_de_obra' | 'transporte' | 'materiales' | 'otros';
   description: string;
   amount: number;
   date: string;
-  period: 'mensual' | 'anual' | 'puntual';
+  category: 'Mano de Obra' | 'Materiales' | 'Combustible' | 'Herramientas' | 'Costos Fijos' | 'Varios';
+  employeeId?: string; // Opcional, para saber a quién se le pagó
+  budgetId?: string; // Opcional, para atar el gasto a un proyecto
+  workOrderId?: string; // Opcional, para atar el gasto a una orden de trabajo específica
+  method: 'Efectivo' | 'Transferencia' | 'Tarjeta de Débito' | 'Tarjeta de Crédito';
+  subCategory?: string; // Para desglosar categorías como Costos Fijos
 }
