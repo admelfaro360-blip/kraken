@@ -256,7 +256,8 @@ export default function Budgets() {
           materialsFactured: 0
         },
         materials: budget.materials || [],
-        language: budget.language || 'es'
+        language: budget.language || 'es',
+        includeIVA: budget.includeIVA !== false
       }, formatType);
 
       if (shouldPrint) {
@@ -330,7 +331,7 @@ export default function Budgets() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-kraken-orange transition-colors"
+                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-[#FF4D00] transition-colors"
                   onClick={() => handleSort('client')}
                 >
                   <div className="flex items-center">
@@ -339,7 +340,7 @@ export default function Budgets() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-kraken-orange transition-colors"
+                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-[#FF4D00] transition-colors"
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center">
@@ -349,7 +350,7 @@ export default function Budgets() {
                 </th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Descripción</th>
                 <th 
-                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-kraken-orange transition-colors"
+                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-[#FF4D00] transition-colors"
                   onClick={() => handleSort('total')}
                 >
                   <div className="flex items-center">
@@ -387,7 +388,8 @@ export default function Budgets() {
                   </td>
                   <td className="px-6 py-5">
                     <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                      {(Number(budget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
+                      {(Number(budget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € 
+                      {(budget.includeIVA !== false) ? ' + IVA' : ''}
                     </span>
                   </td>
                   <td className="px-6 py-5">
@@ -584,10 +586,12 @@ export default function Budgets() {
                     <span className="text-neutral-400 font-medium">Subtotal</span>
                     <span className="font-bold">{(Number(selectedBudget.subtotal) || 0).toFixed(2)} €</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-neutral-400 font-medium">IVA (23%)</span>
-                    <span className="font-bold">{(Number(selectedBudget.total) - Number(selectedBudget.subtotal)).toFixed(2)} €</span>
-                  </div>
+                  {selectedBudget.includeIVA !== false && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-neutral-400 font-medium">IVA</span>
+                      <span className="font-bold">{(Number(selectedBudget.total) - Number(selectedBudget.subtotal)).toFixed(2)} €</span>
+                    </div>
+                  )}
                   <div className="pt-4 border-t border-neutral-800 flex items-center justify-between">
                     <span className="text-xs font-bold text-[#FF4D00] uppercase tracking-widest">Total General</span>
                     <span className="text-2xl font-black text-white">{(Number(selectedBudget.total) || 0).toFixed(2)} €</span>
@@ -598,7 +602,7 @@ export default function Budgets() {
                   <div>
                     <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Vista Cliente (PDF)</p>
                     <p className="text-base font-bold text-[#FF4D00]">
-                      {(Number(selectedBudget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € + IVA
+                      {(Number(selectedBudget.subtotal) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € {(selectedBudget.includeIVA !== false) ? '+ IVA' : ''}
                     </p>
                   </div>
                   <div className="text-right">
