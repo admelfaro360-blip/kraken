@@ -1,16 +1,40 @@
-// src/types.ts
+// src/lib/storage.ts
+import { Expense } from '../types';
+import { db } from './firebase';
+import { 
+  collection, 
+  getDocs, 
+  setDoc, 
+  doc, 
+  deleteDoc 
+} from 'firebase/firestore';
 
-// ... (otras interfaces)
+const EXPENSES_COLLECTION = 'expenses';
 
-export interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  category: 'Mano de Obra' | 'Materiales' | 'Combustible' | 'Herramientas' | 'Costos Fijos' | 'Varios';
-  employeeId?: string; // Opcional, para saber a quién se le pagó
-  budgetId?: string; // Opcional, para atar el gasto a un proyecto
-  workOrderId?: string; // Opcional, para atar el gasto a una orden de trabajo específica
-  method: 'Efectivo' | 'Transferencia' | 'Tarjeta de Débito' | 'Tarjeta de Crédito';
-  subCategory?: string; // Para desglosar categorías como Costos Fijos
-}
+// ... (Otras funciones de storage)
+
+export const fetchExpenses = async (): Promise<Expense[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, EXPENSES_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as Expense);
+  } catch (e) {
+    console.error("Error fetching expenses", e);
+    return [];
+  }
+};
+
+export const saveExpense = async (expense: Expense) => {
+  try {
+    await setDoc(doc(db, EXPENSES_COLLECTION, expense.id), expense);
+  } catch (e) {
+    console.error("Error saving expense", e);
+  }
+};
+
+export const deleteExpense = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, EXPENSES_COLLECTION, id));
+  } catch (e) {
+    console.error("Error deleting expense", e);
+  }
+};
