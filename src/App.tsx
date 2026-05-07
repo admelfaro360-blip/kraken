@@ -7,6 +7,7 @@ import Budgets from './pages/Budgets';
 import NewBudget from './pages/NewBudget';
 import WorkOrders from './pages/WorkOrders';
 import Payments from './pages/Payments';
+import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Agenda from './pages/Agenda';
 import Config from './pages/Config';
@@ -35,11 +36,14 @@ export default function App() {
             username: 'admin',
             email: adminEmail,
             role: 'admin',
-            password: 'admin123' // Default password for manual login
+            password: 'admin1234' // Default password for manual login
           });
         }
-      } catch (e) {
-        console.error('Error seeding admin:', e);
+      } catch (e: any) {
+        // Only log if it's not a permission error (which is expected if not logged in)
+        if (!e.message?.includes('Missing or insufficient permissions')) {
+          console.error('Error seeding admin:', e);
+        }
       }
     };
     seedAdmin();
@@ -137,6 +141,7 @@ export default function App() {
               <Route path="agenda" element={<Agenda />} />
               <Route path="ordenes" element={<WorkOrders />} />
               <Route path="cobros" element={<Payments />} />
+              <Route path="gastos" element={<Expenses />} />
               <Route path="reportes" element={<Reports />} />
               <Route path="config" element={<Config />} />
             </Route>
