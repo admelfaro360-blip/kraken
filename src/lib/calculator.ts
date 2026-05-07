@@ -5,7 +5,8 @@ export const calculateBudget = (
   materials: Material[],
   config: BusinessConfig,
   clientZone: number,
-  marginPct: number
+  marginPct: number,
+  includeIVA: boolean = true
 ): CalculationResult => {
   // 1. Estructura Diaria
   const totalFixedCosts = config.fixedCosts.reduce((acc, cost) => acc + cost.amount, 0);
@@ -62,7 +63,7 @@ export const calculateBudget = (
   const subtotal = minWithoutMargin + marginEur + materialsFactured;
 
   // 9. IVA
-  const iva = subtotal * config.iva;
+  const iva = includeIVA ? subtotal * config.iva : 0;
 
   // 10. Total Final
   const total = subtotal + iva;
