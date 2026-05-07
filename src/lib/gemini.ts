@@ -65,3 +65,33 @@ export async function translateMaterials(materials: any[], targetLanguage: strin
     return materials;
   }
 }
+
+export interface MaterialSearchResult {
+  title: string;
+  url: string;
+  price: string;
+  source: string;
+}
+
+export async function findMaterialLinks(materialName: string): Promise<MaterialSearchResult[]> {
+  if (!materialName || materialName.trim() === "") return [];
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview", // Correct model name
+      contents: `Search for the material "${materialName}" on Amazon Spain, Leroy Merlin Portugal, and Worten Portugal (or similar construction/electronics portals in Portugal). 
+      Provide a list of 3-5 real products with their actual titles, specific URLs to the product pages, and estimated prices in Euros.
+      Return the results as a JSON array of objects with the following keys: title, url, price, source.
+      Only return the JSON array, nothing else.`,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const results = JSON.parse(response.text.trim());
+    return Array.isArray(results) ? results : [];
+  } catch (error) {
+    console.error("Material search error:", error);
+    return [];
+  }
+}
