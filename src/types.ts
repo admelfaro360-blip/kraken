@@ -1,40 +1,162 @@
-// src/lib/storage.ts
-import { Expense } from '../types';
-import { db } from './firebase';
-import { 
-  collection, 
-  getDocs, 
-  setDoc, 
-  doc, 
-  deleteDoc 
-} from 'firebase/firestore';
+export interface CostItem {
+  id: string;
+  name: string;
+  amount: number;
+}
 
-const EXPENSES_COLLECTION = 'expenses';
+export interface ZoneItem {
+  id: number;
+  name: string;
+  amount: number;
+}
 
-// ... (Otras funciones de storage)
+export interface BusinessConfig {
+  fixedCosts: CostItem[];
+  variableCosts: CostItem[];
+  daysPerMonth: number;
+  halfDayCostOficial: number;
+  halfDayCostAyudante: number;
+  guaranteePct: number;
+  materialMarkup: number;
+  iva: number;
+  transportZones: ZoneItem[];
+}
 
-export const fetchExpenses = async (): Promise<Expense[]> => {
-  try {
-    const querySnapshot = await getDocs(collection(db, EXPENSES_COLLECTION));
-    return querySnapshot.docs.map(doc => doc.data() as Expense);
-  } catch (e) {
-    console.error("Error fetching expenses", e);
-    return [];
-  }
-};
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'user';
+  password?: string;
+}
 
-export const saveExpense = async (expense: Expense) => {
-  try {
-    await setDoc(doc(db, EXPENSES_COLLECTION, expense.id), expense);
-  } catch (e) {
-    console.error("Error saving expense", e);
-  }
-};
+export interface Client {
+  id: string;
+  name: string;
+  vertical: 'hogar' | 'industria';
+  address: string;
+  city?: string;
+  phone: string;
+  email: string;
+  zone: number;
+  notes?: string;
+  createdAt?: string;
+}
 
-export const deleteExpense = async (id: string) => {
-  try {
-    await deleteDoc(doc(db, EXPENSES_COLLECTION, id));
-  } catch (e) {
-    console.error("Error deleting expense", e);
-  }
-};
+export interface LaborAssignment {
+  id: string;
+  role: 'oficial' | 'ayudante';
+  count: number;
+  assignedPerson?: string;
+}
+
+export interface Phase {
+  id: string;
+  name: string;
+  labor: LaborAssignment[];
+  halfDays: number;
+  days: number;
+  extraTransport: number;
+  notes?: string;
+}
+
+export interface Material {
+  id: string;
+  name: string;
+  cost: number;
+  quantity: number;
+}
+
+export interface Budget {
+  id: string;
+  clientId: string;
+  clientName?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  clientVertical?: 'hogar' | 'industria';
+  date: string;
+  description: string;
+  language: 'es' | 'pt' | 'en';
+  status: 'borrador' | 'enviado' | 'aprobado' | 'rechazado' | 'ejecucion' | 'finalizado' | 'cobrado';
+  phases: Phase[];
+  materials: Material[];
+  internalNotes?: string;
+  startDate?: string;
+  marginPct: number;
+  includeIVA: boolean;
+  calculation?: CalculationResult;
+  subtotal?: number;
+  total?: number;
+  createdAt?: string;
+}
+
+export interface CalculationResult {
+  moTotal: number;
+  structureTotal: number;
+  transportTotal: number;
+  guarantee: number;
+  minWithoutMargin: number;
+  marginEur: number;
+  marginPct: number;
+  materialsFactured: number;
+  subtotal: number;
+  iva: number;
+  total: number;
+}
+
+export interface WorkOrder {
+  id: string;
+  budgetId: string;
+  clientId: string;
+  clientName: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  description: string;
+  startDate?: string;
+  endDate?: string;
+  duration?: number;
+  crewId?: string;
+  status: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
+  assignedTo?: string[];
+  phases?: Phase[];
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface Payment {
+  id: string;
+  budgetId: string;
+  clientId: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  status: 'pendiente' | 'cobrado' | 'parcial';
+  method?: 'transferencia' | 'efectivo' | 'tarjeta';
+  notes?: string;
+  createdAt?: string;
+  dueDate?: string;
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  role: 'oficial' | 'ayudante';
+  phone?: string;
+  email?: string;
+  status: 'activo' | 'inactivo';
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: 'Mano de Obra' | 'Materiales' | 'Combustible' | 'Herramientas' | 'Costos Fijos' | 'Varios';
+  employeeId?: string; // Opcional, para saber a quién se le pagó
+  budgetId?: string; // Opcional, para atar el gasto a un proyecto
+  workOrderId?: string; // Opcional, para atar el gasto a una orden de trabajo específica
+  method: 'Efectivo' | 'Transferencia' | 'Tarjeta de Débito' | 'Tarjeta de Crédito';
+  subCategory?: string; // Para desglosar categorías como Costos Fijos
+}
