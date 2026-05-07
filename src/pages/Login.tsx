@@ -108,12 +108,19 @@ export default function Login() {
       } else {
         console.log('Manual check failed: No matching user/password found in Firestore');
         setError('Usuario o contraseña incorrectos');
-        toast.error('Error al iniciar sesión');
+        toast.error('Usuario o contraseña incorrectos');
       }
     } catch (err: any) {
       console.error('Error during login process:', err);
-      setError('Error al conectar con el servidor');
-      toast.error('Error de conexión');
+      let errorMsg = 'Error al conectar con el servidor';
+      try {
+        const parsedError = JSON.parse(err.message);
+        errorMsg = `Error: ${parsedError.error || 'Desconocido'}`;
+      } catch (e) {
+        errorMsg = err.message || errorMsg;
+      }
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
