@@ -71,8 +71,25 @@ const EMPLOYEES_COLLECTION = 'employees';
 const CONFIG_COLLECTION = 'config';
 const USERS_COLLECTION = 'users';
 
-// ... (resto de funciones fetchBudgets, fetchClients, etc. se mantienen igual)
+// ==========================================
+// USUARIOS (Acceso al sistema)
+// ==========================================
+export const fetchUsers = async (): Promise<any[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (e) {
+    console.warn('Error al obtener usuarios:', e);
+    return [];
+  }
+};
 
+// ==========================================
+// EMPLEADOS (Personal Operativo)
+// ==========================================
 export const fetchEmployees = async (): Promise<Employee[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
@@ -99,4 +116,66 @@ export const deleteEmployee = async (id: string) => {
   }
 };
 
-// ...
+// ==========================================
+// PRESUPUESTOS
+// ==========================================
+export const fetchBudgets = async (): Promise<Budget[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, BUDGETS_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as Budget);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, BUDGETS_COLLECTION);
+    return [];
+  }
+};
+
+export const saveBudget = async (budget: Budget) => {
+  try {
+    await setDoc(doc(db, BUDGETS_COLLECTION, budget.id), budget);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, BUDGETS_COLLECTION);
+  }
+};
+
+export const deleteBudget = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, BUDGETS_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, BUDGETS_COLLECTION);
+  }
+};
+
+// ==========================================
+// CLIENTES
+// ==========================================
+export const fetchClients = async (): Promise<Client[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, CLIENTS_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as Client);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, CLIENTS_COLLECTION);
+    return [];
+  }
+};
+
+export const saveClient = async (client: Client) => {
+  try {
+    await setDoc(doc(db, CLIENTS_COLLECTION, client.id), client);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, CLIENTS_COLLECTION);
+  }
+};
+
+export const deleteClient = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, CLIENTS_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, CLIENTS_COLLECTION);
+  }
+};
+
+// ==========================================
+// ÓRDENES DE TRABAJO
+// ==========================================
+export const fetchWorkOrders = async (): Promise<WorkOrder[]> => {
+  try {
