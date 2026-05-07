@@ -39,7 +39,7 @@ export default function Layout({ onLogout }: LayoutProps) {
     { name: 'Agenda', icon: Calendar, path: '/agenda' },
     { name: 'Órdenes de Trabajo', icon: ClipboardList, path: '/ordenes' },
     { name: 'Cobros', icon: Wallet, path: '/cobros' },
-    { name: 'Pagos', icon: TrendingDown, path: '/gastos' },
+    { name: 'Gastos', icon: TrendingDown, path: '/gastos' },
     { name: 'Reportes', icon: BarChart3, path: '/reportes' },
     { name: 'Configuración', icon: Settings, path: '/config' },
   ];
