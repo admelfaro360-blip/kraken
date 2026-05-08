@@ -83,7 +83,7 @@ export interface Budget {
   internalNotes?: string;
   startDate?: string;
   marginPct: number;
-  includeIVA: boolean;
+  applyIVA?: boolean;
   calculation?: CalculationResult;
   subtotal?: number;
   total?: number;
@@ -135,17 +135,6 @@ export interface Payment {
   notes?: string;
   createdAt?: string;
   dueDate?: string;
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  role: 'oficial' | 'ayudante';
-  phone?: string;
-  email?: string;
-  status: 'activo' | 'inactivo';
-  notes?: string;
-  createdAt?: string;
 }
 
 export interface Expense {
