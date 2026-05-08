@@ -117,7 +117,8 @@ function Dashboard() {
   const [config, setConfig] = React.useState<any>(null);
 
   const [metrics, setMetrics] = React.useState({
-    totalFacturado: 0,
+    totalFacturadoConIVA: 0,
+    totalFacturadoSinIVA: 0,
     totalBudgets: 0,
     approvalRate: 0,
     uniqueClients: 0,
@@ -162,7 +163,8 @@ function Dashboard() {
 
   // Widget visibility state
   const [visibleWidgets, setVisibleWidgets] = React.useState({
-    facturado: true,
+    facturado_con_iva: true,
+    facturado_sin_iva: true,
     presupuestos: true,
     aprobacion: true,
     clientes: true,
@@ -178,12 +180,13 @@ function Dashboard() {
 
   // Card slot assignments
   const [cardSlots, setCardSlots] = React.useState([
-    'facturado', 'presupuestos', 'aprobacion', 'clientes',
-    'iva', 'ganancia', 'gastos_estructura', 'gastos_mo'
+    'facturado_con_iva', 'facturado_sin_iva', 'presupuestos', 'aprobacion', 
+    'clientes', 'iva', 'ganancia', 'gastos_estructura'
   ]);
 
   const allMetrics = [
-    { id: 'facturado', label: 'Total Facturado', icon: Euro, color: 'orange' },
+    { id: 'facturado_con_iva', label: 'Total Facturado con IVA', icon: Euro, color: 'orange' },
+    { id: 'facturado_sin_iva', label: 'Total Facturado sin IVA', icon: Euro, color: 'orange' },
     { id: 'presupuestos', label: 'Presupuestos', icon: FileCheck, color: 'orange' },
     { id: 'aprobacion', label: 'Tasa Aprobación', icon: TrendingUp, color: 'orange' },
     { id: 'clientes', label: 'Clientes Únicos', icon: Users, color: 'orange' },
@@ -236,7 +239,13 @@ function Dashboard() {
     );
 
     // 1. TOTAL FACTURADO: Sumatoria del 'Total General' de presupuestos aprobados
-    const totalFacturado = approvedBudgets.reduce((acc, b) => acc + (b.total || 0), 0);
+    const totalFacturadoConIVA = approvedBudgets
+      .filter(b => b.applyIVA !== false)
+      .reduce((acc, b) => acc + (b.total || 0), 0);
+    
+    const totalFacturadoSinIVA = approvedBudgets
+      .filter(b => b.applyIVA === false)
+      .reduce((acc, b) => acc + (b.total || 0), 0);
 
     // 2. PRESUPUESTOS: Conteo total del mes
     const totalBudgetsCount = filteredBudgets.length;
@@ -270,7 +279,8 @@ function Dashboard() {
     const netProfit = totalMarginReal - totalExpenses;
 
     setMetrics({
-      totalFacturado,
+      totalFacturadoConIVA,
+      totalFacturadoSinIVA,
       totalBudgets: totalBudgetsCount,
       approvalRate,
       uniqueClients: uniqueClientsCount,
@@ -284,7 +294,8 @@ function Dashboard() {
 
   const getMetricValue = (id: string) => {
     switch (id) {
-      case 'facturado': return metrics.totalFacturado.toLocaleString('de-DE') + ' €';
+      case 'facturado_con_iva': return metrics.totalFacturadoConIVA.toLocaleString('de-DE') + ' €';
+      case 'facturado_sin_iva': return metrics.totalFacturadoSinIVA.toLocaleString('de-DE') + ' €';
       case 'presupuestos': return metrics.totalBudgets.toString();
       case 'aprobacion': return Math.round(metrics.approvalRate) + '%';
       case 'clientes': return metrics.uniqueClients.toString();
@@ -293,7 +304,7 @@ function Dashboard() {
       case 'gastos_estructura': return metrics.structureExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
       case 'gastos_mo': return metrics.laborExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
       case 'gastos_totales': return metrics.totalExpenses.toLocaleString('de-DE') + ' €';
-      case 'margen_promedio': return metrics.totalFacturado > 0 ? Math.round((metrics.netProfit / metrics.totalFacturado) * 100) + '%' : '0%';
+      case 'margen_promedio': return metrics.totalFacturadoConIVA > 0 ? Math.round((metrics.netProfit / metrics.totalFacturadoConIVA) * 100) + '%' : '0%';
       default: return '0';
     }
   };
@@ -352,7 +363,8 @@ function Dashboard() {
 
   const getMetricTrend = (id: string) => {
     switch (id) {
-      case 'facturado': return 0;
+      case 'facturado_con_iva': return 0;
+      case 'facturado_sin_iva': return 0;
       case 'presupuestos': return 0;
       case 'aprobacion': return 0;
       case 'clientes': return 0;
