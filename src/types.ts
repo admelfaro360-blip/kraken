@@ -65,6 +65,12 @@ export interface Material {
   name: string;
   cost: number;
   quantity: number;
+  searchResults?: {
+    link: string;
+    image: string;
+    price: string;
+    site: string;
+  }[];
 }
 
 export interface Budget {
