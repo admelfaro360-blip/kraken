@@ -81,7 +81,9 @@ export const fetchBudgets = async (): Promise<Budget[]> => {
   }
 };
 
-export const getStoredBudgets = fetchBudgets;
+export const getStoredBudgets = async (): Promise<Budget[]> => {
+  return fetchBudgets();
+};
 
 export const saveBudget = async (budget: Budget) => {
   try {
@@ -109,7 +111,9 @@ export const fetchClients = async (): Promise<Client[]> => {
   }
 };
 
-export const getStoredClients = fetchClients;
+export const getStoredClients = async (): Promise<Client[]> => {
+  return fetchClients();
+};
 
 export const saveClient = async (client: Client) => {
   try {
@@ -148,7 +152,9 @@ export const fetchPayments = async (): Promise<any[]> => {
   }
 };
 
-export const getStoredPayments = fetchPayments;
+export const getStoredPayments = async (): Promise<any[]> => {
+  return fetchPayments();
+};
 
 export const savePayment = async (payment: any) => {
   try {
@@ -176,7 +182,9 @@ export const fetchWorkOrders = async (): Promise<WorkOrder[]> => {
   }
 };
 
-export const getStoredWorkOrders = fetchWorkOrders;
+export const getStoredWorkOrders = async (): Promise<WorkOrder[]> => {
+  return fetchWorkOrders();
+};
 
 export const saveWorkOrder = async (order: WorkOrder) => {
   try {
@@ -204,7 +212,9 @@ export const fetchExpenses = async (): Promise<Expense[]> => {
   }
 };
 
-export const getStoredExpenses = fetchExpenses;
+export const getStoredExpenses = async (): Promise<Expense[]> => {
+  return fetchExpenses();
+};
 
 export const saveExpense = async (expense: Expense) => {
   try {
