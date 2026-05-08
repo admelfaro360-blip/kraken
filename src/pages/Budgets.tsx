@@ -29,13 +29,14 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme } from '../lib/ThemeContext';
 import { formatFirebaseDate } from '../lib/utils';
-
 import { fetchBudgets, deleteBudget as deleteStoredBudget, saveBudget } from '../lib/storage';
 import { generateBudgetPDF } from '../lib/pdfGenerator';
+import { toast } from 'sonner';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -55,8 +56,6 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-import { toast } from 'sonner';
-
 export default function Budgets() {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
@@ -68,6 +67,28 @@ export default function Budgets() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
+
+  const topScrollRef = React.useRef<HTMLDivElement>(null);
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(2000);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && tableContainerRef.current) {
+      tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleTableScroll = () => {
+    if (topScrollRef.current && tableContainerRef.current) {
+      topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
+    }
+  };
+
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      setTableWidth(tableContainerRef.current.scrollWidth);
+    }
+  }, [budgets, searchTerm]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -328,8 +349,22 @@ export default function Budgets() {
       </div>
 
       <div className="kraken-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        {/* Top Scrollbar */}
+        <div 
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto h-2 pointer-events-auto custom-scrollbar-thin bg-neutral-50 dark:bg-neutral-950 border-b border-neutral-100 dark:border-neutral-800"
+          style={{ width: '100%' }}
+        >
+          <div style={{ width: `${tableWidth}px`, height: '1px' }} />
+        </div>
+
+        <div 
+          ref={tableContainerRef}
+          onScroll={handleTableScroll}
+          className="overflow-x-auto"
+        >
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-neutral-50 dark:bg-neutral-950 border-b border-neutral-100 dark:border-neutral-800">
                 <th 
