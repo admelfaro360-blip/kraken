@@ -52,7 +52,7 @@ const StatusBadge = ({ status }: { status: Payment['status'] }) => {
   );
 };
 
-export default function Payments() {
+function Payments() {
   const { isDarkMode } = useTheme();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -585,3 +585,5 @@ export default function Payments() {
     </div>
   );
 }
+
+export default Payments;
