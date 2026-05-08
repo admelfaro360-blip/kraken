@@ -10,16 +10,11 @@ import {
   Truck,
   Users,
   Percent,
-  Info,
-  Search,
-  ExternalLink,
-  Loader2,
-  PackageSearch
+  Info
 } from 'lucide-react';
 import { Phase, Material, BusinessConfig, CalculationResult, Client, Budget } from '../types';
 import { calculateBudget } from '../lib/calculator';
 import { generateBudgetPDF } from '../lib/pdfGenerator';
-import { findMaterialLinks, MaterialSearchResult } from '../lib/gemini';
 import { format } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
@@ -51,9 +46,19 @@ export default function NewBudget() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [clientZone, setClientZone] = useState(1);
   const [marginPct, setMarginPct] = useState(30);
-  const [includeIVA, setIncludeIVA] = useState(true);
-  const [searchLoading, setSearchLoading] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<Record<string, MaterialSearchResult[]>>({});
+  const [applyIVA, setApplyIVA] = useState(true);
+  const [isMonthly, setIsMonthly] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [availableServices, setAvailableServices] = useState<string[]>([
+    'Limpieza de Piscina', 
+    'Jardinería', 
+    'Limpieza espacios comunes', 
+    'Electricidad', 
+    'Mantenimiento general'
+  ]);
+  const [newService, setNewService] = useState('');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientInfo, setClientInfo] = useState({
     name: searchParams.get('cliente') || '',
     phone: '',
@@ -130,6 +135,18 @@ export default function NewBudget() {
           setPhases(budget.phases);
           setMaterials(budget.materials);
           setMarginPct(budget.marginPct);
+          setApplyIVA(budget.applyIVA !== undefined ? budget.applyIVA : true);
+          setIsMonthly(budget.isMonthly || false);
+          setSelectedMonths(budget.selectedMonths || []);
+          setSelectedDays(budget.selectedDays || []);
+          if (budget.enabledServices) {
+            setSelectedServices(budget.enabledServices);
+            // Also ensure availableServices contains any custom ones from the budget
+            setAvailableServices(prev => {
+              const unique = new Set([...prev, ...(budget.enabledServices || [])]);
+              return Array.from(unique);
+            });
+          }
           setClientInfo({
             name: budget.clientName || budget.clientId || '',
             phone: budget.clientPhone || '',
@@ -148,9 +165,9 @@ export default function NewBudget() {
 
   useEffect(() => {
     if (!config) return;
-    const result = calculateBudget(phases, materials, config, clientZone, marginPct, includeIVA);
+    const result = calculateBudget(phases, materials, config, clientZone, marginPct);
     setCalculation(result);
-  }, [phases, materials, clientZone, marginPct, config, includeIVA]);
+  }, [phases, materials, clientZone, marginPct, config]);
 
   if (!config) {
     return (
@@ -239,19 +256,6 @@ export default function NewBudget() {
     setMaterials(materials.filter(m => m.id !== id));
   };
 
-  const handleSearchMaterial = async (id: string, name: string) => {
-    if (!name || name.trim() === "") return;
-    setSearchLoading(id);
-    try {
-      const results = await findMaterialLinks(name);
-      setSearchResults(prev => ({ ...prev, [id]: results }));
-    } catch (error) {
-      console.error("Error searching material:", error);
-    } finally {
-      setSearchLoading(null);
-    }
-  };
-
   const handleSave = async () => {
     if (!calculation) return;
     
@@ -270,10 +274,14 @@ export default function NewBudget() {
       materials,
       internalNotes,
       marginPct,
-      includeIVA,
+      applyIVA,
+      isMonthly,
+      selectedMonths,
+      selectedDays,
+      enabledServices: selectedServices,
       calculation,
       subtotal: calculation.subtotal,
-      total: calculation.total
+      total: applyIVA ? calculation.total : calculation.subtotal
     };
 
     // Save client if it doesn't exist
@@ -309,9 +317,12 @@ export default function NewBudget() {
       description: description || 'Sin descripción',
       calculation: calculation,
       materials: materials,
+      applyIVA: applyIVA,
+      isMonthly: isMonthly,
+      enabledServices: selectedServices,
+      selectedDays: selectedDays,
       language: clientInfo.language,
-      config: config,
-      includeIVA: includeIVA
+      config: config
     });
     doc.save(`Presupuesto_${clientInfo.name || 'Kraken'}.pdf`);
   };
@@ -462,24 +473,81 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIncludeIVA(!includeIVA)}
-                      className={cn(
-                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-                        includeIVA ? "bg-[#FF4D00]" : "bg-neutral-200 dark:bg-neutral-700"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                          includeIVA ? "translate-x-6" : "translate-x-1"
-                        )}
-                      />
-                    </button>
-                    <span className="text-sm font-bold uppercase tracking-widest text-neutral-500">¿Incluir IVA? ({config.iva * 100}%)</span>
+                  <div className="flex items-center gap-3 pt-6">
+                    <input 
+                      type="checkbox"
+                      id="applyIVA"
+                      checked={applyIVA}
+                      onChange={(e) => setApplyIVA(e.target.checked)}
+                      className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
+                    />
+                    <label htmlFor="applyIVA" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Aplicar IVA</label>
+                  </div>
+                  <div className="flex items-center gap-3 pt-6">
+                    <input 
+                      type="checkbox"
+                      id="isMonthly"
+                      checked={isMonthly}
+                      onChange={(e) => setIsMonthly(e.target.checked)}
+                      className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200 text-kraken-orange"
+                    />
+                    <label htmlFor="isMonthly" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Mensualizado</label>
                   </div>
                 </div>
+
+                <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Días de la Semana</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
+                      <button
+                        key={day}
+                        onClick={() => {
+                          if (selectedDays.includes(day)) {
+                            setSelectedDays(selectedDays.filter(d => d !== day));
+                          } else {
+                            setSelectedDays([...selectedDays, day]);
+                          }
+                        }}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                          selectedDays.includes(day)
+                            ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                            : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                        )}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {isMonthly && (
+                  <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Meses del Contrato / Servicio</label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
+                        <button
+                          key={month}
+                          onClick={() => {
+                            if (selectedMonths.includes(month)) {
+                              setSelectedMonths(selectedMonths.filter(m => m !== month));
+                            } else {
+                              setSelectedMonths([...selectedMonths, month]);
+                            }
+                          }}
+                          className={cn(
+                            "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            selectedMonths.includes(month)
+                              ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20"
+                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                          )}
+                        >
+                          {month.substring(0, 3)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -579,6 +647,51 @@ export default function NewBudget() {
                     </div>
                   </div>
                 ))}
+
+                <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800">
+                  <h3 className="text-xl font-bold tracking-tight dark:text-white mb-6">Servicios Habilitados</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {availableServices.map(service => (
+                      <div key={service} className="flex items-center gap-3">
+                        <input 
+                          type="checkbox"
+                          id={`service-${service}`}
+                          checked={selectedServices.includes(service)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedServices([...selectedServices, service]);
+                            } else {
+                              setSelectedServices(selectedServices.filter(s => s !== service));
+                            }
+                          }}
+                          className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
+                        />
+                        <label htmlFor={`service-${service}`} className="text-sm font-bold text-neutral-600 dark:text-neutral-400 cursor-pointer">{service}</label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 flex items-center gap-3 max-w-sm">
+                    <input 
+                      type="text"
+                      value={newService}
+                      onChange={(e) => setNewService(e.target.value)}
+                      placeholder="Nuevo servicio..."
+                      className="kraken-input h-10 text-sm"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (newService.trim()) {
+                          setAvailableServices([...availableServices, newService.trim()]);
+                          setSelectedServices([...selectedServices, newService.trim()]);
+                          setNewService('');
+                        }
+                      }}
+                      className="p-2 bg-neutral-100 dark:bg-neutral-800 text-kraken-orange rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -600,107 +713,44 @@ export default function NewBudget() {
                   <p className="text-neutral-400 dark:text-neutral-500 font-medium">No se han añadido materiales a este presupuesto.</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {materials.map((material) => (
-                    <div key={material.id} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700 transition-colors">
-                        <div className="md:col-span-2 space-y-2">
-                          <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Descripción Material</label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="text" 
-                              value={material.name}
-                              onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
-                              className="kraken-input h-10 px-3 text-sm flex-1"
-                            />
-                            <button
-                              onClick={() => handleSearchMaterial(material.id, material.name)}
-                              disabled={searchLoading === material.id}
-                              className="p-2 bg-neutral-200 dark:bg-neutral-700 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-[#FF4D00] hover:text-white transition-all disabled:opacity-50"
-                              title="Buscar enlaces y precios"
-                            >
-                              {searchLoading === material.id ? (
-                                <Loader2 size={18} className="animate-spin" />
-                              ) : (
-                                <Search size={18} />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Costo Unitario (€)</label>
+                    <div key={material.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700 transition-colors">
+                      <div className="md:col-span-2 space-y-2">
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Descripción Material</label>
+                        <input 
+                          type="text" 
+                          value={material.name}
+                          onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
+                          className="kraken-input h-10 px-3 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Costo Unitario (€)</label>
+                        <input 
+                          type="number" 
+                          value={material.cost}
+                          onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
+                          className="kraken-input h-10 px-3 text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Cantidad</label>
                           <input 
                             type="number" 
-                            value={material.cost}
-                            onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
+                            value={material.quantity}
+                            onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
                             className="kraken-input h-10 px-3 text-sm"
                           />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 space-y-2">
-                            <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Cantidad</label>
-                            <input 
-                              type="number" 
-                              value={material.quantity}
-                              onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
-                              className="kraken-input h-10 px-3 text-sm"
-                            />
-                          </div>
-                          <button 
-                            onClick={() => removeMaterial(material.id)}
-                            className="p-2 text-neutral-300 dark:text-neutral-600 hover:text-[#FF4D00] transition-colors mb-1"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        <button 
+                          onClick={() => removeMaterial(material.id)}
+                          className="p-2 text-neutral-300 dark:text-neutral-600 hover:text-[#FF4D00] transition-colors mb-1"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
-                      
-                      {searchResults[material.id] && searchResults[material.id].length > 0 && (
-                        <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl p-4 ml-4">
-                          <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                            <PackageSearch size={14} className="text-[#FF4D00]" />
-                            Resultados Encontrados
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {searchResults[material.id].map((result, idx) => (
-                              <a 
-                                key={idx}
-                                href={result.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors group"
-                              >
-                                <div className="flex-1 min-w-0 pr-4">
-                                  <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">{result.title}</p>
-                                  <p className="text-[10px] text-neutral-500 font-medium">{result.source} • <span className="text-[#FF4D00]">{result.price}</span></p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const priceMatch = result.price.match(/(\d+[,.]\d+)/);
-                                      const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '.')) : 0;
-                                      updateMaterial(material.id, 'name', result.title);
-                                      updateMaterial(material.id, 'cost', price);
-                                      // Clear results for this material after use
-                                      setSearchResults(prev => {
-                                        const next = { ...prev };
-                                        delete next[material.id];
-                                        return next;
-                                      });
-                                    }}
-                                    className="p-1.5 bg-[#FF4D00]/10 text-[#FF4D00] rounded-lg text-[10px] font-bold hover:bg-[#FF4D00] hover:text-white transition-colors"
-                                  >
-                                    Cargar
-                                  </button>
-                                  <ExternalLink size={14} className="text-neutral-300 group-hover:text-[#FF4D00] transition-colors" />
-                                </div>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -790,21 +840,17 @@ export default function NewBudget() {
                   <span className="text-neutral-400 font-medium">Subtotal</span>
                   <span className="font-bold text-white">{calculation?.subtotal.toFixed(2)} €</span>
                 </div>
-                {includeIVA && (
-                  <div className="flex items-center justify-between text-base">
-                    <span className="text-neutral-400 font-medium">IVA ({config.iva * 100}%)</span>
-                    <span className="font-bold text-white">{calculation?.iva.toFixed(2)} €</span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between text-base">
+                  <span className="text-neutral-400 font-medium">IVA ({config.iva * 100}%)</span>
+                  <span className="font-bold text-white">{applyIVA ? calculation?.iva.toFixed(2) : '0.00'} €</span>
+                </div>
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
                   <span className="text-xs font-bold tracking-tight uppercase text-neutral-400">TOTAL GENERAL</span>
-                  <span className="text-xl font-black text-white">{calculation?.total.toFixed(2)} €</span>
+                  <span className="text-xl font-black text-white">{applyIVA ? (calculation?.subtotal + calculation?.iva).toFixed(2) : calculation?.subtotal.toFixed(2)} €</span>
                 </div>
                 <div className="flex items-center justify-between pt-4">
                   <span className="text-[10px] font-bold tracking-tight uppercase text-[#FF4D00]">VISTA CLIENTE (PDF)</span>
-                  <span className="text-lg font-black text-[#FF4D00]">
-                    {calculation?.subtotal.toFixed(2)} € {includeIVA ? '+ IVA' : ''}
-                  </span>
+                  <span className="text-lg font-black text-[#FF4D00]">{calculation?.subtotal.toFixed(2)} € {applyIVA ? '+ IVA' : '(IVA no incl.)'}</span>
                 </div>
               </div>
             </div>
