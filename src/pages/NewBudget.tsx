@@ -10,7 +10,10 @@ import {
   Truck,
   Users,
   Percent,
-  Info
+  Info,
+  Search,
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { Phase, Material, BusinessConfig, CalculationResult, Client, Budget } from '../types';
 import { calculateBudget } from '../lib/calculator';
@@ -21,6 +24,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useTheme } from '../lib/ThemeContext';
 import { saveBudget, fetchBudgets, fetchClients, saveClient, fetchConfig } from '../lib/storage';
+import { GoogleGenAI, Type } from "@google/genai";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -71,6 +75,57 @@ export default function NewBudget() {
   const [config, setConfig] = useState<BusinessConfig | null>(null);
   const [calculation, setCalculation] = useState<CalculationResult | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [searchingMaterials, setSearchingMaterials] = useState<string[]>([]);
+
+  const searchMaterialOnInternet = async (materialId: string, description: string) => {
+    if (!description.trim()) return;
+    
+    setSearchingMaterials(prev => [...prev, materialId]);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+      
+      const prompt = `Busca el material "${description}" en 3 sitios web de confianza de España (ej: Amazon España, Leroy Merlin España, Bricomart, ManoMano). 
+      Para cada uno de los 3 sitios distintos (IMPORTANTE: deben ser 3 sitios distintos), necesito:
+      1. URL completa directa al producto
+      2. URL de una imagen del producto que funcione
+      3. El mejor precio actual con su moneda (€)
+      4. El nombre del sitio web
+      
+      Responde SOLO el JSON con un array de objetos con las propiedades: site, price, link, image.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                site: { type: Type.STRING },
+                price: { type: Type.STRING },
+                link: { type: Type.STRING },
+                image: { type: Type.STRING }
+              },
+              required: ["site", "price", "link", "image"]
+            }
+          },
+          tools: [{ googleSearch: {} }]
+        }
+      });
+
+      const text = response.text || "[]";
+      const results = JSON.parse(text);
+      
+      setMaterials(prev => prev.map(m => m.id === materialId ? { ...m, searchResults: results } : m));
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setSearchingMaterials(prev => prev.filter(id => id !== materialId));
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -473,157 +528,167 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="flex flex-col gap-6 pt-6">
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="applyIVA" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Aplicar IVA</label>
-                      <button
-                        type="button"
-                        onClick={() => setApplyIVA(!applyIVA)}
-                        className={cn(
-                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                          applyIVA ? "bg-kraken-orange" : "bg-neutral-200 dark:bg-neutral-800"
-                        )}
-                      >
-                        <span className={cn(
-                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                          applyIVA ? "translate-x-5" : "translate-x-0"
-                        )} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="isMonthly" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Mensualizado</label>
-                      <button
-                        type="button"
-                        onClick={() => setIsMonthly(!isMonthly)}
-                        className={cn(
-                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                          isMonthly ? "bg-kraken-orange" : "bg-neutral-200 dark:bg-neutral-800"
-                        )}
-                      >
-                        <span className={cn(
-                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                          isMonthly ? "translate-x-5" : "translate-x-0"
-                        )} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {isMonthly && (
-                    <div className="space-y-10 pt-10 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-4 duration-500">
-                      {/* Days of the Week Selection */}
-                      <div className="space-y-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
-                          <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Días de la Semana</label>
-                        </div>
-                        <div className="flex flex-wrap gap-2 sm:gap-3">
-                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => {
-                                if (selectedDays.includes(day)) {
-                                  setSelectedDays(selectedDays.filter(d => d !== day));
-                                } else {
-                                  setSelectedDays([...selectedDays, day]);
-                                }
-                              }}
-                              className={cn(
-                                "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                                selectedDays.includes(day)
-                                  ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                  : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                              )}
-                            >
-                              {day}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Contract Months Selection */}
-                      <div className="space-y-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
-                          <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Meses del Contrato / Servicio</label>
-                        </div>
-                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                          {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
-                            <button
-                              key={month}
-                              type="button"
-                              onClick={() => {
-                                if (selectedMonths.includes(month)) {
-                                  setSelectedMonths(selectedMonths.filter(m => m !== month));
-                                } else {
-                                  setSelectedMonths([...selectedMonths, month]);
-                                }
-                              }}
-                              className={cn(
-                                "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                                selectedMonths.includes(month)
-                                  ? "bg-[#FF4D00] border-[#FF4D00] text-white shadow-lg shadow-kraken-orange/20"
-                                  : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                              )}
-                            >
-                              {month.substring(0, 3)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Enabled Services Selection */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
-                          <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500">Servicios Habilitados</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                          {availableServices.map(service => (
-                            <div key={service} className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
-                              <input 
-                                type="checkbox"
-                                id={`service-${service}`}
-                                checked={selectedServices.includes(service)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedServices([...selectedServices, service]);
-                                  } else {
-                                    setSelectedServices(selectedServices.filter(s => s !== service));
-                                  }
-                                }}
-                                className="w-5 h-5 accent-[#FF4D00] rounded-lg border-neutral-200 dark:border-neutral-700"
-                              />
-                              <label htmlFor={`service-${service}`} className="text-xs font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400 cursor-pointer flex-1">{service}</label>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-8 flex items-center gap-3 max-w-sm">
-                          <input 
-                            type="text"
-                            value={newService}
-                            onChange={(e) => setNewService(e.target.value)}
-                            placeholder="Añadir otro servicio..."
-                            className="kraken-input h-11 text-xs font-bold uppercase tracking-widest"
-                          />
-                          <button 
+                  <div className="flex flex-col gap-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="p-6 rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <label htmlFor="applyIVA" className="text-[10px] font-black uppercase tracking-widest text-[#FF4D00]">Fuerza Fiscal</label>
+                            <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Aplicar IVA (23%)</span>
+                          </div>
+                          <button
                             type="button"
-                            onClick={() => {
-                              if (newService.trim()) {
-                                setAvailableServices([...availableServices, newService.trim()]);
-                                setSelectedServices([...selectedServices, newService.trim()]);
-                                setNewService('');
-                              }
-                            }}
-                            className="h-11 w-11 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-[#FF4D00] rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shrink-0"
+                            onClick={() => setApplyIVA(!applyIVA)}
+                            className={cn(
+                              "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                              applyIVA ? "bg-[#FF4D00]" : "bg-neutral-200 dark:bg-neutral-800"
+                            )}
                           >
-                            <Plus size={24} />
+                            <span className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out mt-0.5 ml-0.5",
+                              applyIVA ? "translate-x-5" : "translate-x-0"
+                            )} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                          <div className="flex flex-col gap-1">
+                            <label htmlFor="isMonthly" className="text-[10px] font-black uppercase tracking-widest text-[#FF4D00]">Modelo de Servicio</label>
+                            <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Servicio Mensualizado</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsMonthly(!isMonthly)}
+                            className={cn(
+                              "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                              isMonthly ? "bg-[#FF4D00]" : "bg-neutral-200 dark:bg-neutral-800"
+                            )}
+                          >
+                            <span className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out mt-0.5 ml-0.5",
+                              isMonthly ? "translate-x-5" : "translate-x-0"
+                            )} />
                           </button>
                         </div>
                       </div>
+
+                      {isMonthly && (
+                        <div className="md:row-span-2 space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                          {/* Days of the Week Selection */}
+                          <div className="kraken-card p-6 space-y-5 border-[#FF4D00]/20">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
+                              <label className="text-xs font-black uppercase tracking-widest text-neutral-500 block">Días de Visita</label>
+                            </div>
+                            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
+                              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedDays.includes(day)) {
+                                      setSelectedDays(selectedDays.filter(d => d !== day));
+                                    } else {
+                                      setSelectedDays([...selectedDays, day]);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border-2",
+                                    selectedDays.includes(day)
+                                      ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                      : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                                  )}
+                                >
+                                  {day}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Contract Months Selection */}
+                          <div className="kraken-card p-6 space-y-5 border-[#FF4D00]/20">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-4 bg-[#FF4D00] rounded-full" />
+                              <label className="text-xs font-black uppercase tracking-widest text-neutral-500 block">Meses de Servicio</label>
+                            </div>
+                            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 gap-2">
+                              {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
+                                <button
+                                  key={month}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedMonths.includes(month)) {
+                                      setSelectedMonths(selectedMonths.filter(m => m !== month));
+                                    } else {
+                                      setSelectedMonths([...selectedMonths, month]);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border",
+                                    selectedMonths.includes(month)
+                                      ? "bg-[#FF4D00] border-[#FF4D00] text-white shadow-lg shadow-kraken-orange/20"
+                                      : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                                  )}
+                                >
+                                  {month.substring(0, 3)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Enabled Services Selection */}
+                          <div className="kraken-card p-6 space-y-6 border-[#FF4D00]/20">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
+                              <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500">Servicios Activos</h3>
+                            </div>
+                            <div className="space-y-3">
+                              {availableServices.map(service => (
+                                <div key={service} className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+                                  <label htmlFor={`service-${service}`} className="text-[10px] font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400 cursor-pointer">{service}</label>
+                                  <input 
+                                    type="checkbox"
+                                    id={`service-${service}`}
+                                    checked={selectedServices.includes(service)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedServices([...selectedServices, service]);
+                                      } else {
+                                        setSelectedServices(selectedServices.filter(s => s !== service));
+                                      }
+                                    }}
+                                    className="w-5 h-5 accent-[#FF4D00] rounded-lg border-neutral-200 dark:border-neutral-700"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                              <input 
+                                type="text"
+                                value={newService}
+                                onChange={(e) => setNewService(e.target.value)}
+                                placeholder="Añadir..."
+                                className="kraken-input h-9 text-[10px] font-bold uppercase tracking-widest bg-transparent"
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  if (newService.trim()) {
+                                    setAvailableServices([...availableServices, newService.trim()]);
+                                    setSelectedServices([...selectedServices, newService.trim()]);
+                                    setNewService('');
+                                  }
+                                }}
+                                className="h-9 w-9 flex items-center justify-center bg-[#FF4D00]/10 text-[#FF4D00] rounded-xl hover:bg-[#FF4D00]/20 transition-colors shrink-0"
+                              >
+                                <Plus size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
               </div>
 
               <div className="space-y-4">
@@ -746,44 +811,92 @@ export default function NewBudget() {
                   <p className="text-neutral-400 dark:text-neutral-500 font-medium">No se han añadido materiales a este presupuesto.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {materials.map((material) => (
-                    <div key={material.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700 transition-colors">
-                      <div className="md:col-span-2 space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Descripción Material</label>
-                        <input 
-                          type="text" 
-                          value={material.name}
-                          onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
-                          className="kraken-input h-10 px-3 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Costo Unitario (€)</label>
-                        <input 
-                          type="number" 
-                          value={material.cost}
-                          onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
-                          className="kraken-input h-10 px-3 text-sm"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 space-y-2">
-                          <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Cantidad</label>
+                    <div key={material.id} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl border border-neutral-100 dark:border-neutral-800 group hover:border-[#FF4D00]/30 transition-all">
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center justify-between">
+                            Descripción Material
+                            <button 
+                              onClick={() => searchMaterialOnInternet(material.id, material.name)}
+                              disabled={searchingMaterials.includes(material.id)}
+                              className="text-[#FF4D00] hover:text-[#E64500] transition-colors flex items-center gap-1 disabled:opacity-50"
+                            >
+                              {searchingMaterials.includes(material.id) ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <Search size={12} />
+                              )}
+                              IA Search
+                            </button>
+                          </label>
                           <input 
-                            type="number" 
-                            value={material.quantity}
-                            onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
-                            className="kraken-input h-10 px-3 text-sm"
+                            type="text" 
+                            value={material.name}
+                            onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
+                            className="kraken-input h-10 px-3 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
+                            placeholder="Ej: Flexible bajo mesada 1/2"
                           />
                         </div>
-                        <button 
-                          onClick={() => removeMaterial(material.id)}
-                          className="p-2 text-neutral-300 dark:text-neutral-600 hover:text-[#FF4D00] transition-colors mb-1"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Costo Un. (€)</label>
+                          <input 
+                            type="number" 
+                            value={material.cost}
+                            onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
+                            className="kraken-input h-10 px-3 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 space-y-2">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cant.</label>
+                            <input 
+                              type="number" 
+                              value={material.quantity}
+                              onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
+                              className="kraken-input h-10 px-3 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => removeMaterial(material.id)}
+                            className="p-2 text-neutral-300 dark:text-neutral-700 hover:text-red-500 transition-colors mb-0.5"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
+
+                      {/* IA Search Results */}
+                      {material.searchResults && material.searchResults.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                          {material.searchResults.map((result, idx) => (
+                            <a 
+                              key={idx} 
+                              href={result.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex flex-col gap-3 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:border-[#FF4D00]/50 hover:shadow-lg hover:shadow-[#FF4D00]/5 transition-all group/res"
+                            >
+                              <div className="aspect-square rounded-xl overflow-hidden bg-neutral-50 dark:bg-neutral-800 relative">
+                                <img 
+                                  src={result.image} 
+                                  alt={result.site} 
+                                  className="w-full h-full object-cover group-hover/res:scale-110 transition-transform duration-500"
+                                  onError={(e) => (e.currentTarget.src = 'https://placehold.co/400x400?text=No+Image')}
+                                />
+                                <div className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-black/90 backdrop-blur rounded-lg opacity-0 group-hover/res:opacity-100 transition-opacity">
+                                  <ExternalLink size={12} className="text-[#FF4D00]" />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[#FF4D00]">{result.site}</p>
+                                <p className="text-sm font-black text-neutral-900 dark:text-white">{result.price}</p>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
