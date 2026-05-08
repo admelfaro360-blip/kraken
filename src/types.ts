@@ -84,6 +84,10 @@ export interface Budget {
   startDate?: string;
   marginPct: number;
   applyIVA?: boolean;
+  isMonthly?: boolean;
+  enabledServices?: string[];
+  selectedMonths?: string[];
+  selectedDays?: string[];
   calculation?: CalculationResult;
   subtotal?: number;
   total?: number;
