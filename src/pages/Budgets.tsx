@@ -33,7 +33,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme } from '../lib/ThemeContext';
-import { formatFirebaseDate } from '../lib/utils';
+import { formatFirebaseDate, cn } from '../lib/utils';
 import { fetchBudgets, deleteBudget as deleteStoredBudget, saveBudget } from '../lib/storage';
 import { generateBudgetPDF } from '../lib/pdfGenerator';
 import { toast } from 'sonner';
@@ -67,6 +67,14 @@ export default function Budgets() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
+
+  const [isAccumulated, setIsAccumulated] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = format(new Date(), 'MMMM', { locale: es });
+  const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
+  
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(capitalizedMonth);
 
   const topScrollRef = React.useRef<HTMLDivElement>(null);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -181,11 +189,25 @@ export default function Budgets() {
   };
 
   const sortedBudgets = React.useMemo(() => {
-    let sortableBudgets = budgets.filter(budget => 
-      budget.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      budget.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      budget.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let sortableBudgets = budgets.filter(budget => {
+      const matchesSearch = 
+        budget.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        budget.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        budget.description.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      if (!isAccumulated) {
+        const budgetDate = new Date(budget.date);
+        const budgetYear = budgetDate.getFullYear();
+        const budgetMonth = format(budgetDate, 'MMMM', { locale: es });
+        const capitalizedBudgetMonth = budgetMonth.charAt(0).toUpperCase() + budgetMonth.slice(1);
+
+        return budgetYear === selectedYear && capitalizedBudgetMonth === selectedMonth;
+      }
+
+      return true;
+    });
 
     if (sortConfig !== null) {
       sortableBudgets.sort((a: any, b: any) => {
@@ -316,31 +338,87 @@ export default function Budgets() {
           <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 dark:text-white">Presupuestos</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Gestiona y crea propuestas comerciales profesionales.</p>
         </div>
-        <Link to="/presupuestos/nuevo" className="kraken-btn">
-          <Plus size={20} />
+        <Link to="/presupuestos/nuevo" className="h-14 px-8 bg-[#FF4D00] hover:bg-[#FF4D00]/90 text-white rounded-2xl flex items-center gap-3 transition-all font-black uppercase tracking-widest shadow-lg shadow-[#FF4D00]/20 active:scale-95 group">
+          <Plus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
           <span>Nuevo Presupuesto</span>
         </Link>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative col-span-2">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-          <input 
-            type="text" 
-            placeholder="Buscar por cliente, número o descripción..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="kraken-input w-full pl-12"
-          />
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 bg-white dark:bg-neutral-900 p-6 rounded-[32px] border border-neutral-100 dark:border-neutral-800">
+        <div className="flex flex-wrap items-center gap-6">
+          {/* Monthly / Accumulated Toggle */}
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1.5 rounded-2xl">
+            <button
+              onClick={() => setIsAccumulated(false)}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                !isAccumulated 
+                  ? "bg-[#FF4D00] text-white shadow-lg shadow-[#FF4D00]/20" 
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              )}
+            >
+              Mensual
+            </button>
+            <button
+              onClick={() => setIsAccumulated(true)}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                isAccumulated 
+                  ? "bg-[#FF4D00] text-white shadow-lg shadow-[#FF4D00]/20" 
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              )}
+            >
+              Acumulado
+            </button>
+          </div>
+
+          {!isAccumulated && (
+            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent border-none outline-none text-sm font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer appearance-none pr-6 relative"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right center', backgroundSize: '16px' }}
+                >
+                  {[2024, 2025, 2026].map(y => (
+                    <option key={y} value={y} className="bg-white dark:bg-neutral-900">{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-800" />
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer appearance-none pr-6 relative"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right center', backgroundSize: '16px' }}
+                >
+                  {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(m => (
+                    <option key={m} value={m} className="bg-white dark:bg-neutral-900">{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
-          <button className="kraken-btn-secondary flex-1 flex items-center justify-center gap-2 px-4 py-3">
-            <Filter size={20} />
-            <span>Filtros</span>
-          </button>
+
+        <div className="flex items-center gap-3 w-full xl:w-auto">
+          <div className="relative flex-1 xl:w-96">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Buscar cliente, N° o descripción..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="kraken-input w-full pl-12 h-12 text-sm"
+            />
+          </div>
           <button 
             onClick={exportToPDF}
-            className="kraken-btn-secondary flex items-center justify-center gap-2 px-4 py-3"
+            className="h-12 w-12 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all shadow-sm"
             title="Exportar Listado a PDF"
           >
             <Download size={20} />
