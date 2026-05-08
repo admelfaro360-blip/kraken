@@ -47,13 +47,13 @@ import {
   fetchClients, 
   fetchConfig 
 } from '../lib/storage';
-import { parseISO, getMonth, getYear, format } from 'date-fns';
+import { parseISO, getMonth, getYear, format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { calculateBudget } from '../lib/calculator';
 
 const COLORS = ['#FF4D00', '#2B2D42', '#8D99AE', '#FF7033', '#EDF2F4', '#4CAF50', '#2196F3', '#9C27B0'];
 
-export default function Reports() {
+function Reports() {
   const { isDarkMode } = useTheme();
   
   // Data State
@@ -109,29 +109,25 @@ export default function Reports() {
     localStorage.setItem('reports_month', selectedMonth);
     localStorage.setItem('reports_year', selectedYear);
   }, [period, selectedMonth, selectedYear]);
-  const parseLocalDate = (dateString: string) => {
-    if (!dateString) return new Date();
-    // Si es un ISO string completo, extraemos solo la parte de la fecha
-    const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
-    const [year, month, day] = datePart.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   // Filtered Data
   const filteredData = useMemo(() => {
     const monthIdx = months.indexOf(selectedMonth);
     const yearNum = parseInt(selectedYear);
+    
+    // Create boundaries for the selected period
+    const start = period === 'anual' 
+      ? startOfMonth(new Date(yearNum, 0)) 
+      : startOfMonth(new Date(yearNum, monthIdx));
+    const end = period === 'anual' 
+      ? endOfMonth(new Date(yearNum, 11)) 
+      : endOfMonth(new Date(yearNum, monthIdx));
 
     const filterByDate = (rawDate: any) => {
       if (!rawDate) return false;
       try {
         const dateStr = formatFirebaseDate(rawDate);
-        const localDate = parseLocalDate(dateStr);
-        if (period === 'anual') {
-          return localDate.getFullYear() === yearNum;
-        } else {
-          return localDate.getFullYear() === yearNum && localDate.getMonth() === monthIdx;
-        }
+        return isWithinInterval(parseISO(dateStr), { start, end });
       } catch (e) {
         return false;
       }
@@ -248,8 +244,9 @@ export default function Reports() {
     
     const allWorkOrders = workOrders.filter(wo => {
       try {
-        const localDate = parseLocalDate(wo.createdAt || wo.startDate || '');
-        return localDate.getFullYear() === parseInt(selectedYear);
+        const dateStr = formatFirebaseDate(wo.createdAt || wo.startDate || '');
+        const date = parseISO(dateStr);
+        return date.getFullYear() === parseInt(selectedYear);
       } catch (e) {
         return false;
       }
@@ -257,8 +254,9 @@ export default function Reports() {
 
     allWorkOrders.forEach(wo => {
       try {
-        const localDate = parseLocalDate(wo.createdAt || wo.startDate || '');
-        const monthLabel = months[localDate.getMonth()].substring(0, 3);
+        const dateStr = formatFirebaseDate(wo.createdAt || wo.startDate || '');
+        const date = parseISO(dateStr);
+        const monthLabel = months[date.getMonth()].substring(0, 3);
         volumeMap[monthLabel]++;
       } catch (e) {}
     });
@@ -618,3 +616,5 @@ export default function Reports() {
     </div>
   );
 }
+
+export default Reports;
