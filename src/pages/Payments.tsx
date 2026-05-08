@@ -16,10 +16,12 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Plus
+  Plus,
+  Calendar,
+  History
 } from 'lucide-react';
 import { Payment, Client, Budget } from '../types';
-import { format } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTheme } from '../lib/ThemeContext';
 import { clsx, type ClassValue } from 'clsx';
@@ -60,6 +62,9 @@ export default function Payments() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [filterType, setFilterType] = useState<'mensual' | 'acumulado'>('mensual');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [paymentToEdit, setPaymentToEdit] = useState<Partial<Payment>>({
     status: 'pendiente',
     date: new Date().toISOString().split('T')[0],
@@ -80,7 +85,19 @@ export default function Payments() {
     loadData();
   }, []);
 
-  const filteredPayments = payments.filter(payment => 
+  const filteredByDatePayments = payments.filter(payment => {
+    const paymentDate = parseISO(payment.date);
+    const start = filterType === 'mensual' 
+      ? startOfMonth(new Date(selectedYear, selectedMonth))
+      : startOfYear(new Date(selectedYear, 0));
+    const end = filterType === 'mensual'
+      ? endOfMonth(new Date(selectedYear, selectedMonth))
+      : endOfYear(new Date(selectedYear, 11));
+
+    return isWithinInterval(paymentDate, { start, end });
+  });
+
+  const filteredPayments = filteredByDatePayments.filter(payment => 
     payment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -128,8 +145,26 @@ export default function Payments() {
     setIsDeleteModalOpen(true);
   };
 
-  const totalCollected = payments.filter(p => p.status === 'cobrado').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const totalPending = payments.filter(p => p.status === 'pendiente').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalCollected = filteredByDatePayments.filter(p => p.status === 'cobrado').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalPending = filteredByDatePayments.filter(p => p.status === 'pendiente').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+  // Calculate previous month totals for the historical card
+  const prevMonthDate = new Date(selectedYear, selectedMonth - 1);
+  const prevYear = prevMonthDate.getFullYear();
+  const prevMonth = prevMonthDate.getMonth();
+  
+  const prevMonthPending = payments.filter(payment => {
+    const paymentDate = parseISO(payment.date);
+    const start = startOfMonth(new Date(prevYear, prevMonth));
+    const end = endOfMonth(new Date(prevYear, prevMonth));
+    return isWithinInterval(paymentDate, { start, end }) && payment.status === 'pendiente';
+  }).reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+  const months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
 
   return (
     <div className="space-y-8">
@@ -138,35 +173,124 @@ export default function Payments() {
           <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 dark:text-white">Cobros y Facturación</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Gestiona los ingresos y el estado de tus facturas.</p>
         </div>
-        <button 
-          onClick={() => {
-            setPaymentToEdit({ status: 'pendiente', date: new Date().toISOString().split('T')[0], method: 'transferencia' });
-            setIsModalOpen(true);
-          }}
-          className="kraken-btn"
-        >
-          <Plus size={20} />
-          <span>Nuevo Cobro</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Custom Filter Controls */}
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-2xl">
+            <button
+              onClick={() => setFilterType('mensual')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                filterType === 'mensual' 
+                  ? "bg-[#FF4D00] text-white shadow-lg shadow-orange-500/20" 
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              )}
+            >
+              Mensual
+            </button>
+            <button
+              onClick={() => setFilterType('acumulado')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                filterType === 'acumulado' 
+                  ? "bg-[#FF4D00] text-white shadow-lg shadow-orange-500/20" 
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              )}
+            >
+              Acumulado
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-[#FF4D00] outline-none text-neutral-900 dark:text-white"
+            >
+              {years.map(y => (
+                <option key={y} value={y} className="dark:bg-neutral-900">{y}</option>
+              ))}
+            </select>
+
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className={cn(
+                "bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-[#FF4D00] outline-none text-neutral-900 dark:text-white transition-opacity",
+                filterType === 'acumulado' && "opacity-50 pointer-events-none"
+              )}
+            >
+              {months.map((m, i) => (
+                <option key={m} value={i} className="dark:bg-neutral-900">{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            onClick={() => {
+              setPaymentToEdit({ status: 'pendiente', date: new Date().toISOString().split('T')[0], method: 'transferencia' });
+              setIsModalOpen(true);
+            }}
+            className="kraken-btn"
+          >
+            <Plus size={20} />
+            <span>Nuevo Cobro</span>
+          </button>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-neutral-900 dark:bg-neutral-950 text-white p-8 rounded-3xl shadow-xl flex items-center justify-between border border-transparent dark:border-neutral-800">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Total Cobrado</p>
-            <h3 className="text-3xl font-black">{totalCollected.toFixed(2)} €</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-neutral-900 dark:bg-neutral-950 text-white p-8 rounded-3xl shadow-xl flex items-center justify-between border border-transparent dark:border-neutral-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <DollarSign size={120} />
           </div>
-          <div className="p-4 rounded-2xl bg-green-500/10 text-green-500">
+          <div className="space-y-1 relative z-10">
+            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Total Cobrado</p>
+            <h3 className="text-3xl font-black">{totalCollected.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</h3>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{filterType === 'mensual' ? `${months[selectedMonth]} ${selectedYear}` : `Año ${selectedYear}`}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-green-500/10 text-green-500 relative z-10">
             <TrendingUp size={32} />
           </div>
         </div>
-        <div className="kraken-card p-8 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Pendiente de Cobro</p>
-            <h3 className="text-3xl font-black text-neutral-900 dark:text-white">{totalPending.toFixed(2)} €</h3>
+        <div className="kraken-card p-8 flex items-center justify-between relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Clock size={120} />
           </div>
-          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-400">
+          <div className="space-y-1 relative z-10">
+            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Pendiente de Cobro</p>
+            <h3 className="text-3xl font-black text-neutral-900 dark:text-white">{totalPending.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</h3>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{filterType === 'mensual' ? `Mes Actual` : `Anual`}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-400 relative z-10">
             <TrendingDown size={32} />
+          </div>
+        </div>
+
+        <div className="kraken-card p-8 border-neutral-100 dark:border-neutral-800 flex items-center justify-between relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <History size={120} />
+          </div>
+          <div className="space-y-1 relative z-10">
+            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Pendiente {months[prevMonth]}</p>
+            <h3 className="text-3xl font-black text-neutral-900 dark:text-white">{prevMonthPending.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</h3>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Histórico Mes Anterior</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 relative z-10">
+            <History size={32} />
+          </div>
+        </div>
+
+        <div className="bg-[#FF4D00] text-white p-8 rounded-3xl shadow-xl shadow-orange-500/20 flex items-center justify-between relative overflow-hidden group">
+           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <History size={120} />
+          </div>
+          <div className="space-y-1 relative z-10">
+            <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">Total General</p>
+            <h3 className="text-3xl font-black text-white">{(totalCollected + totalPending).toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</h3>
+            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Facturación {months[selectedMonth]}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-white/10 text-white relative z-10">
+            <DollarSign size={32} />
           </div>
         </div>
       </div>
