@@ -473,81 +473,145 @@ export default function NewBudget() {
                       className="kraken-input"
                     />
                   </div>
-                  <div className="flex items-center gap-3 pt-6">
-                    <input 
-                      type="checkbox"
-                      id="applyIVA"
-                      checked={applyIVA}
-                      onChange={(e) => setApplyIVA(e.target.checked)}
-                      className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
-                    />
-                    <label htmlFor="applyIVA" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Aplicar IVA</label>
-                  </div>
-                  <div className="flex items-center gap-3 pt-6">
-                    <input 
-                      type="checkbox"
-                      id="isMonthly"
-                      checked={isMonthly}
-                      onChange={(e) => setIsMonthly(e.target.checked)}
-                      className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200 text-kraken-orange"
-                    />
-                    <label htmlFor="isMonthly" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Mensualizado</label>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Días de la Semana</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
+                  <div className="flex flex-col gap-6 pt-6">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="applyIVA" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Aplicar IVA</label>
                       <button
-                        key={day}
-                        onClick={() => {
-                          if (selectedDays.includes(day)) {
-                            setSelectedDays(selectedDays.filter(d => d !== day));
-                          } else {
-                            setSelectedDays([...selectedDays, day]);
-                          }
-                        }}
+                        type="button"
+                        onClick={() => setApplyIVA(!applyIVA)}
                         className={cn(
-                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                          selectedDays.includes(day)
-                            ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                            : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                          applyIVA ? "bg-kraken-orange" : "bg-neutral-200 dark:bg-neutral-800"
                         )}
                       >
-                        {day}
+                        <span className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          applyIVA ? "translate-x-5" : "translate-x-0"
+                        )} />
                       </button>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {isMonthly && (
-                  <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Meses del Contrato / Servicio</label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                      {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
-                        <button
-                          key={month}
-                          onClick={() => {
-                            if (selectedMonths.includes(month)) {
-                              setSelectedMonths(selectedMonths.filter(m => m !== month));
-                            } else {
-                              setSelectedMonths([...selectedMonths, month]);
-                            }
-                          }}
-                          className={cn(
-                            "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                            selectedMonths.includes(month)
-                              ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20"
-                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                          )}
-                        >
-                          {month.substring(0, 3)}
-                        </button>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="isMonthly" className="text-xs font-bold uppercase tracking-widest text-neutral-500 cursor-pointer">Mensualizado</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsMonthly(!isMonthly)}
+                        className={cn(
+                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                          isMonthly ? "bg-kraken-orange" : "bg-neutral-200 dark:bg-neutral-800"
+                        )}
+                      >
+                        <span className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          isMonthly ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  {isMonthly && (
+                    <div className="space-y-8 pt-8 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-4 duration-500">
+                      <div className="space-y-4">
+                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Días de la Semana</label>
+                        <div className="flex flex-wrap gap-2">
+                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => {
+                                if (selectedDays.includes(day)) {
+                                  setSelectedDays(selectedDays.filter(d => d !== day));
+                                } else {
+                                  setSelectedDays([...selectedDays, day]);
+                                }
+                              }}
+                              className={cn(
+                                "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                selectedDays.includes(day)
+                                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                              )}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
+                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Meses del Contrato / Servicio</label>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                          {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
+                            <button
+                              key={month}
+                              type="button"
+                              onClick={() => {
+                                if (selectedMonths.includes(month)) {
+                                  setSelectedMonths(selectedMonths.filter(m => m !== month));
+                                } else {
+                                  setSelectedMonths([...selectedMonths, month]);
+                                }
+                              }}
+                              className={cn(
+                                "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                selectedMonths.includes(month)
+                                  ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20"
+                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                              )}
+                            >
+                              {month.substring(0, 3)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-6">Servicios Habilitados</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {availableServices.map(service => (
+                            <div key={service} className="flex items-center gap-3">
+                              <input 
+                                type="checkbox"
+                                id={`service-${service}`}
+                                checked={selectedServices.includes(service)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedServices([...selectedServices, service]);
+                                  } else {
+                                    setSelectedServices(selectedServices.filter(s => s !== service));
+                                  }
+                                }}
+                                className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
+                              />
+                              <label htmlFor={`service-${service}`} className="text-sm font-bold text-neutral-600 dark:text-neutral-400 cursor-pointer">{service}</label>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-6 flex items-center gap-3 max-w-sm">
+                          <input 
+                            type="text"
+                            value={newService}
+                            onChange={(e) => setNewService(e.target.value)}
+                            placeholder="Nuevo servicio..."
+                            className="kraken-input h-10 text-sm"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if (newService.trim()) {
+                                setAvailableServices([...availableServices, newService.trim()]);
+                                setSelectedServices([...selectedServices, newService.trim()]);
+                                setNewService('');
+                              }
+                            }}
+                            className="p-2 bg-neutral-100 dark:bg-neutral-800 text-kraken-orange rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                          >
+                            <Plus size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
               </div>
 
               <div className="space-y-4">
@@ -648,49 +712,6 @@ export default function NewBudget() {
                   </div>
                 ))}
 
-                <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800">
-                  <h3 className="text-xl font-bold tracking-tight dark:text-white mb-6">Servicios Habilitados</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {availableServices.map(service => (
-                      <div key={service} className="flex items-center gap-3">
-                        <input 
-                          type="checkbox"
-                          id={`service-${service}`}
-                          checked={selectedServices.includes(service)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedServices([...selectedServices, service]);
-                            } else {
-                              setSelectedServices(selectedServices.filter(s => s !== service));
-                            }
-                          }}
-                          className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
-                        />
-                        <label htmlFor={`service-${service}`} className="text-sm font-bold text-neutral-600 dark:text-neutral-400 cursor-pointer">{service}</label>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 flex items-center gap-3 max-w-sm">
-                    <input 
-                      type="text"
-                      value={newService}
-                      onChange={(e) => setNewService(e.target.value)}
-                      placeholder="Nuevo servicio..."
-                      className="kraken-input h-10 text-sm"
-                    />
-                    <button 
-                      onClick={() => {
-                        if (newService.trim()) {
-                          setAvailableServices([...availableServices, newService.trim()]);
-                          setSelectedServices([...selectedServices, newService.trim()]);
-                          setNewService('');
-                        }
-                      }}
-                      className="p-2 bg-neutral-100 dark:bg-neutral-800 text-kraken-orange rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  </div>
                 </div>
               </div>
             </>
