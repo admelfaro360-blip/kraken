@@ -23,8 +23,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useTheme } from '../lib/ThemeContext';
-import { saveBudget, fetchBudgets, fetchClients, saveClient, fetchConfig } from '../lib/storage';
+import { saveBudget, fetchBudgets, fetchClients, saveClient, fetchConfig, saveWorkOrder } from '../lib/storage';
 import { GoogleGenAI, Type } from "@google/genai";
+import { toast } from 'sonner';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -85,12 +86,13 @@ export default function NewBudget() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
       
-      const prompt = `Busca el material "${description}" en 3 sitios web de confianza de Portugal (ej: Amazon.es, Leroy Merlin Portugal, Worten.pt, Castro Electrónica, ManoMano.pt). 
-      Para cada uno de los 3 sitios distintos (IMPORTANTE: deben ser 3 sitios distintos y deben ser tiendas que operen o envíen a Portugal), necesito:
-      1. URL completa directa al producto
-      2. URL de una imagen del producto que funcione
-      3. El mejor precio actual con su moneda (€)
-      4. El nombre del sitio web (ej: Leroy Merlin PT)
+      const prompt = `Busca el material "${description}" en tiendas online de Portugal y España que envíen a Portugal. 
+      Prioriza: Amazon.es, Leroy Merlin PT, Worten.pt, Castro Electrónica, Robert Mauser, Aki.pt, o ManoMano.pt.
+      
+      IMPORTANTE:
+      - Necesito 3 resultados de tiendas distintas.
+      - Para cada uno necesito: sitio web, precio en euros, link directo y una URL de imagen válida.
+      - Si encuentras el producto en Amazon.es, inclúyelo.
       
       Responde SOLO el JSON con un array de objetos con las propiedades: site, price, link, image.`;
 
@@ -355,6 +357,64 @@ export default function NewBudget() {
     }
 
     await saveBudget(budget);
+
+    // Automation: If monthly, generate agenda/work orders
+    if (isMonthly && selectedMonths.length > 0 && selectedDays.length > 0) {
+      toast.info("Generando órdenes de trabajo mensuales...");
+      
+      const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      const dayNames = [
+        'Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
+      ];
+
+      const currentYear = new Date().getFullYear();
+      const generatedOrders: any[] = [];
+
+      selectedMonths.forEach(monthName => {
+        const monthIndex = monthNames.indexOf(monthName);
+        if (monthIndex === -1) return;
+
+        // Get all days of that month
+        const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+          const date = new Date(currentYear, monthIndex, d);
+          const dayName = dayNames[date.getDay()];
+
+          if (selectedDays.includes(dayName)) {
+            // Check if it's in the future or current month
+            const now = new Date();
+            if (date >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+              const workOrder: any = {
+                id: `OT-M-${budget.id}-${format(date, 'yyyyMMdd')}-${Math.floor(Math.random() * 100)}`,
+                budgetId: budget.id,
+                clientId: budget.clientId,
+                clientName: budget.clientName,
+                clientAddress: budget.clientAddress,
+                clientPhone: budget.clientPhone,
+                description: `${budget.description} - ${selectedServices.join(', ')}`,
+                startDate: date.toISOString(),
+                status: 'pendiente',
+                notes: `Generado automáticamente por presupuesto mensualizado. Servicios: ${selectedServices.join(', ')}`,
+                createdAt: new Date().toISOString()
+              };
+              generatedOrders.push(workOrder);
+            }
+          }
+        }
+      });
+
+      // Save all generated orders
+      for (const order of generatedOrders) {
+        await saveWorkOrder(order);
+      }
+      
+      toast.success(`${generatedOrders.length} órdenes de trabajo generadas en la agenda.`);
+    }
+
     navigate('/presupuestos');
   };
 
@@ -791,8 +851,8 @@ export default function NewBudget() {
                 <div className="space-y-6">
                   {materials.map((material) => (
                     <div key={material.id} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl border border-neutral-100 dark:border-neutral-800 group hover:border-[#FF4D00]/30 transition-all">
-                        <div className="md:col-span-2 space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl border border-neutral-100 dark:border-neutral-800 group hover:border-[#FF4D00]/30 transition-all">
+                        <div className="md:col-span-3 space-y-2">
                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center justify-between">
                             Descripción Material
                             <button 
@@ -817,29 +877,30 @@ export default function NewBudget() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Costo Un. (€)</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">P. Unit (€)</label>
                           <input 
                             type="number" 
+                            step="0.01"
                             value={material.cost}
                             onChange={(e) => updateMaterial(material.id, 'cost', Number(e.target.value))}
-                            className="kraken-input h-10 px-3 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
+                            className="kraken-input h-10 px-2 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
                           />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 space-y-2">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cant.</label>
-                            <input 
-                              type="number" 
-                              value={material.quantity}
-                              onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
-                              className="kraken-input h-10 px-3 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cant.</label>
+                          <input 
+                            type="number" 
+                            value={material.quantity}
+                            onChange={(e) => updateMaterial(material.id, 'quantity', Number(e.target.value))}
+                            className="kraken-input h-10 px-2 text-sm font-bold bg-white dark:bg-neutral-900 border-none shadow-sm"
+                          />
+                        </div>
+                        <div className="flex items-center justify-center">
                           <button 
                             onClick={() => removeMaterial(material.id)}
-                            className="p-2 text-neutral-300 dark:text-neutral-700 hover:text-red-500 transition-colors mb-0.5"
+                            className="p-2 text-neutral-300 dark:text-neutral-700 hover:text-red-500 transition-colors"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={20} />
                           </button>
                         </div>
                       </div>
