@@ -80,6 +80,10 @@ export default function Budgets() {
           phone: sb.clientPhone || 'N/A',
           address: sb.clientAddress || 'N/A',
           vertical: sb.clientVertical || 'hogar',
+          isMonthly: sb.isMonthly || false,
+          enabledServices: sb.enabledServices || [],
+          selectedMonths: sb.selectedMonths || [],
+          selectedDays: sb.selectedDays || [],
           date: new Date(formatFirebaseDate(sb.date)),
           subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
           total: Number(sb.total || sb.calculation?.total) || 0
@@ -123,6 +127,10 @@ export default function Budgets() {
         phone: sb.clientPhone || 'N/A',
         address: sb.clientAddress || 'N/A',
         vertical: sb.clientVertical || 'hogar',
+        isMonthly: sb.isMonthly || false,
+        enabledServices: sb.enabledServices || [],
+        selectedMonths: sb.selectedMonths || [],
+        selectedDays: sb.selectedDays || [],
         date: new Date(formatFirebaseDate(sb.date)),
         subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
         total: Number(sb.total || sb.calculation?.total) || 0
@@ -257,6 +265,9 @@ export default function Budgets() {
         },
         materials: budget.materials || [],
         applyIVA: budget.applyIVA,
+        isMonthly: budget.isMonthly,
+        enabledServices: budget.enabledServices,
+        selectedDays: budget.selectedDays,
         language: budget.language || 'es'
       }, formatType);
 
