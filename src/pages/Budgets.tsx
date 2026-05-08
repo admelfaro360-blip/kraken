@@ -76,6 +76,9 @@ export default function Budgets() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(capitalizedMonth);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
+
   const topScrollRef = React.useRef<HTMLDivElement>(null);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [tableWidth, setTableWidth] = useState(2000);
@@ -91,6 +94,11 @@ export default function Budgets() {
       topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
     }
   };
+
+  // Reset page number when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, isAccumulated, selectedYear, selectedMonth]);
 
   useEffect(() => {
     if (tableContainerRef.current) {
@@ -221,7 +229,14 @@ export default function Budgets() {
       });
     }
     return sortableBudgets;
-  }, [budgets, searchTerm, sortConfig]);
+  }, [budgets, searchTerm, sortConfig, isAccumulated, selectedYear, selectedMonth]);
+
+  const totalPages = Math.ceil(sortedBudgets.length / itemsPerPage);
+  
+  const paginatedBudgets = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedBudgets.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedBudgets, currentPage]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     const budgetToUpdate = budgets.find(b => b.id === id);
@@ -488,7 +503,7 @@ export default function Budgets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {sortedBudgets.map((budget) => (
+              {paginatedBudgets.map((budget) => (
                 <tr key={budget.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -608,10 +623,24 @@ export default function Budgets() {
           </table>
         </div>
         <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-          <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Mostrando {sortedBudgets.length} de {budgets.length} presupuestos</p>
+          <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+            Mostrando {Math.min(sortedBudgets.length, (currentPage - 1) * itemsPerPage + 1)}-{Math.min(sortedBudgets.length, currentPage * itemsPerPage)} de {sortedBudgets.length} resultados ({budgets.length} totales)
+          </p>
           <div className="flex items-center gap-2">
-            <button className="kraken-btn-secondary h-10 px-4 text-xs">Anterior</button>
-            <button className="kraken-btn-secondary h-10 px-4 text-xs">Siguiente</button>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="kraken-btn-secondary h-10 px-4 text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="kraken-btn-secondary h-10 px-4 text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
           </div>
         </div>
       </div>
