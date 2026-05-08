@@ -14,8 +14,7 @@ import {
   Layout,
   Eye,
   EyeOff,
-  X,
-  RotateCcw
+  X
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -40,7 +39,6 @@ import {
   getStoredPayments, 
   getStoredWorkOrders, 
   getStoredExpenses,
-  resetAllData,
   fetchConfig
 } from '../lib/storage';
 import { calculateBudget } from '../lib/calculator';
@@ -104,7 +102,6 @@ function Dashboard() {
   const [year, setYear] = React.useState(currentYear);
   const [isAccumulated, setIsAccumulated] = React.useState(false);
   const [isCustomizing, setIsCustomizing] = React.useState(false);
-  const [showResetConfirm, setShowResetConfirm] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   
@@ -372,13 +369,6 @@ function Dashboard() {
     }
   };
 
-  const handleReset = () => {
-    resetAllData();
-    setShowResetConfirm(false);
-    // Refresh page to clear state
-    window.location.reload();
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -448,14 +438,6 @@ function Dashboard() {
               <option value="Enero">Enero</option>
             </select>
           )}
-          
-          <button 
-            onClick={() => setShowResetConfirm(true)}
-            className="h-12 w-12 flex items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-red-500 transition-all"
-            title="Resetear todos los datos"
-          >
-            <RotateCcw size={20} />
-          </button>
 
           <button 
             onClick={() => setIsCustomizing(true)}
@@ -746,35 +728,6 @@ function Dashboard() {
                 className="w-full py-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-2xl font-bold hover:opacity-90 transition-all"
               >
                 Guardar Configuración
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmación de Reset */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in fade-in zoom-in duration-200 border border-neutral-100 dark:border-neutral-800">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
-              <RotateCcw size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-center mb-2 dark:text-white">¿Resetear Datos?</h3>
-            <p className="text-neutral-500 dark:text-neutral-400 text-center mb-8">
-              Esta acción eliminará todos los clientes, presupuestos, órdenes y gastos. No se puede deshacer.
-            </p>
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-6 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleReset}
-                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
-              >
-                Resetear Todo
               </button>
             </div>
           </div>
