@@ -13,10 +13,13 @@ import {
   X,
   Edit2,
   Eye,
-  Trash2
+  Trash2,
+  History,
+  TrendingUp,
+  Layout
 } from 'lucide-react';
 import { WorkOrder, Budget } from '../types';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatFirebaseDate } from '../lib/utils';
 import { useTheme } from '../lib/ThemeContext';
@@ -107,6 +110,15 @@ const StatusBadge = ({ status }: { status: WorkOrder['status'] }) => {
 
 export default function WorkOrders() {
   const { isDarkMode } = useTheme();
+  
+  const monthsList = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const currentMonthName = monthsList[new Date().getMonth()];
+  const currentYear = format(new Date(), 'yyyy');
+
+  const [period, setPeriod] = useState(currentMonthName);
+  const [year, setYear] = useState(currentYear);
+  const [isAccumulated, setIsAccumulated] = useState(false);
+  
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -136,7 +148,49 @@ export default function WorkOrders() {
     loadData();
   }, [isModalOpen]);
 
-  const filteredOrders = workOrders.filter(order => 
+  const getMonthIndex = (monthName: string) => {
+    return monthsList.indexOf(monthName);
+  };
+
+  const filteredByPeriod = React.useMemo(() => {
+    const monthIdx = getMonthIndex(period);
+    const start = startOfMonth(new Date(parseInt(year), monthIdx));
+    const end = endOfMonth(new Date(parseInt(year), monthIdx));
+    
+    return workOrders.filter(order => {
+      const rawDate = order.startDate || order.createdAt;
+      if (!rawDate) return false;
+      const dateStr = formatFirebaseDate(rawDate);
+      const date = parseISO(dateStr);
+      
+      if (isAccumulated) {
+        // All orders from the beginning of the year up to the end of selected month
+        const yearStart = startOfMonth(new Date(parseInt(year), 0));
+        return isWithinInterval(date, { start: yearStart, end });
+      } else {
+        // Only orders for the selected month
+        return isWithinInterval(date, { start, end });
+      }
+    });
+  }, [workOrders, period, year, isAccumulated]);
+
+  const historicalPending = React.useMemo(() => {
+    if (isAccumulated) return []; // In accumulated view, everything is in the main list
+    
+    const monthIdx = getMonthIndex(period);
+    const periodStart = startOfMonth(new Date(parseInt(year), monthIdx));
+    
+    return workOrders.filter(order => {
+      const rawDate = order.startDate || order.createdAt;
+      if (!rawDate) return false;
+      const dateStr = formatFirebaseDate(rawDate);
+      const date = parseISO(dateStr);
+      
+      return isBefore(date, periodStart) && ['pendiente', 'en_progreso'].includes(order.status);
+    });
+  }, [workOrders, period, year, isAccumulated]);
+
+  const filteredOrders = filteredByPeriod.filter(order => 
     order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -241,19 +295,100 @@ export default function WorkOrders() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 dark:text-white">Órdenes de Trabajo</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Controla la ejecución de tus proyectos en tiempo real.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="kraken-btn"
-        >
-          <CheckCircle2 size={20} />
-          <span>Nueva Orden</span>
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <button 
+              onClick={() => setIsAccumulated(false)}
+              className={cn(
+                "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                !isAccumulated ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              )}
+            >
+              Mensual
+            </button>
+            <button 
+              onClick={() => setIsAccumulated(true)}
+              className={cn(
+                "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                isAccumulated ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              )}
+            >
+              Acumulado
+            </button>
+          </div>
+
+          <select 
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="kraken-input !h-12 !px-4 !w-auto text-sm"
+          >
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+
+          {!isAccumulated && (
+            <select 
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="kraken-input !h-12 !px-4 !w-auto text-sm"
+            >
+              {monthsList.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          )}
+
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="kraken-btn !h-12 !px-6"
+          >
+            <CheckCircle2 size={20} />
+            <span>Nueva Orden</span>
+          </button>
+        </div>
       </header>
+
+      {/* Tarjetas de Resumen Dinámicas */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="kraken-card p-6 border-b-4 border-b-blue-500">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl">
+              <Layout size={24} />
+            </div>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Periodo</span>
+          </div>
+          <h4 className="text-3xl font-black dark:text-white">{filteredOrders.length}</h4>
+          <p className="text-xs text-neutral-500 mt-1">Órdenes creadas en {isAccumulated ? `lo que va de ${year}` : period}</p>
+        </div>
+        
+        <div className="kraken-card p-6 border-b-4 border-b-kraken-orange">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-kraken-orange/10 text-kraken-orange rounded-2xl">
+              <Clock size={24} />
+            </div>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Pendientes</span>
+          </div>
+          <h4 className="text-3xl font-black dark:text-white">{filteredOrders.filter(o => ['pendiente', 'en_progreso'].includes(o.status)).length}</h4>
+          <p className="text-xs text-neutral-500 mt-1">Órdenes activas en este periodo</p>
+        </div>
+
+        <div className="kraken-card p-6 border-b-4 border-b-green-500">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-2xl">
+              <CheckCircle2 size={24} />
+            </div>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Completadas</span>
+          </div>
+          <h4 className="text-3xl font-black dark:text-white">{filteredOrders.filter(o => o.status === 'completada').length}</h4>
+          <p className="text-xs text-neutral-500 mt-1">Éxito en el cierre de proyectos</p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative col-span-2">
@@ -272,8 +407,61 @@ export default function WorkOrders() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {filteredOrders.map((order) => (
+      <div className="grid grid-cols-1 gap-6">
+        {/* Sección de Histórico Pendiente (Solo en vista mensual) */}
+        {!isAccumulated && historicalPending.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-kraken-orange/10 text-kraken-orange rounded-lg">
+                <History size={18} />
+              </div>
+              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-400 flex items-center gap-2">
+                Histórico Pendiente
+                <span className="text-[10px] bg-kraken-orange text-white px-2 py-0.5 rounded-full">{historicalPending.length}</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 opacity-80 hover:opacity-100 transition-opacity">
+              {historicalPending.map((order) => (
+                <div key={`hist-${order.id}`} className="kraken-card p-4 border-l-4 border-l-kraken-orange flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-xl">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-kraken-orange uppercase tracking-[0.2em]">{order.id}</span>
+                        <span className="text-[10px] font-bold text-neutral-400">• Arrastre de meses anteriores</span>
+                      </div>
+                      <h4 className="text-sm font-bold dark:text-white">{order.description}</h4>
+                      <p className="text-xs text-neutral-500">{order.clientName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={order.status} />
+                    <button 
+                      onClick={() => handleViewOrder(order)}
+                      className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                    >
+                      <Eye size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-8" />
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
+            <Layout size={18} />
+          </div>
+          <h2 className="text-sm font-black uppercase tracking-widest text-neutral-400">
+            {isAccumulated ? `Órdenes Acumuladas ${year}` : `Órdenes de ${period} ${year}`}
+          </h2>
+        </div>
+
+        {filteredOrders.length > 0 ? filteredOrders.map((order) => (
           <div key={order.id} className="kraken-card p-6 hover:shadow-md group flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4 flex-1">
               <div className={cn(
@@ -366,7 +554,11 @@ export default function WorkOrders() {
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="kraken-card p-12 text-center">
+            <p className="text-neutral-500 font-medium italic">No hay órdenes para el periodo seleccionado.</p>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
