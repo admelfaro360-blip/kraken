@@ -437,7 +437,22 @@ export default function WorkOrders() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <StatusBadge status={order.status} />
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className={cn(
+                        "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border-none outline-none cursor-pointer transition-all appearance-none",
+                        order.status === 'pendiente' && 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400',
+                        order.status === 'en_progreso' && 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+                        order.status === 'completada' && 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+                        order.status === 'cancelada' && 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                      )}
+                    >
+                      <option value="pendiente" className="dark:bg-neutral-900">Pendiente</option>
+                      <option value="en_progreso" className="dark:bg-neutral-900">En Progreso</option>
+                      <option value="completada" className="dark:bg-neutral-900">Completada</option>
+                      <option value="cancelada" className="dark:bg-neutral-900">Cancelada</option>
+                    </select>
                     <button 
                       onClick={() => handleViewOrder(order)}
                       className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
