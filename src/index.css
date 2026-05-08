@@ -4,7 +4,11 @@
   --color-kraken-orange: #FF4D00;
   --color-kraken-orange-hover: #E64500;
   --color-kraken-orange-light: #FF7033;
+  --color-kraken-black: #000000;
 }
+
+/* Configure dark mode variant for Tailwind v4 to use .dark class */
+@variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
@@ -16,11 +20,7 @@
   }
 
   body {
-    @apply bg-neutral-50 text-neutral-900;
-  }
-
-  html.dark body {
-    @apply bg-neutral-950 text-neutral-100;
+    @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
   }
 
   .dark {
@@ -39,6 +39,38 @@
     border-radius: 5px;
   }
   .dark ::-webkit-scrollbar-thumb:hover {
-    background: #404040;
+    @apply bg-neutral-700;
+  }
+}
+
+@layer components {
+  .kraken-input {
+    @apply h-14 w-full px-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600;
+  }
+  
+  .kraken-btn {
+    @apply h-14 px-8 flex items-center justify-center gap-2 bg-[#FF4D00] text-white rounded-2xl font-bold hover:bg-[#E64500] transition-all shadow-lg shadow-[#FF4D00]/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap;
+  }
+
+  .kraken-btn-secondary {
+    @apply h-14 px-8 flex items-center justify-center gap-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-95 whitespace-nowrap;
+  }
+
+  .kraken-card {
+    @apply bg-white dark:bg-neutral-900 rounded-[32px] shadow-sm border border-neutral-100 dark:border-neutral-800 transition-all duration-300 overflow-hidden;
+  }
+
+  .custom-scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+  }
+  .custom-scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #e5e5e5;
+    border-radius: 10px;
+  }
+  .dark .custom-scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #262626;
   }
 }
