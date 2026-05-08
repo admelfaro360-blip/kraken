@@ -510,10 +510,14 @@ export default function NewBudget() {
                   </div>
 
                   {isMonthly && (
-                    <div className="space-y-8 pt-8 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-4 duration-500">
-                      <div className="space-y-4">
-                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Días de la Semana</label>
-                        <div className="flex flex-wrap gap-2">
+                    <div className="space-y-10 pt-10 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-4 duration-500">
+                      {/* Days of the Week Selection */}
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
+                          <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Días de la Semana</label>
+                        </div>
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
                           {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
                             <button
                               key={day}
@@ -526,10 +530,10 @@ export default function NewBudget() {
                                 }
                               }}
                               className={cn(
-                                "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
                                 selectedDays.includes(day)
-                                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                  : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                               )}
                             >
                               {day}
@@ -538,9 +542,13 @@ export default function NewBudget() {
                         </div>
                       </div>
 
-                      <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 block">Meses del Contrato / Servicio</label>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {/* Contract Months Selection */}
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
+                          <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 block">Meses del Contrato / Servicio</label>
+                        </div>
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                           {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(month => (
                             <button
                               key={month}
@@ -553,10 +561,10 @@ export default function NewBudget() {
                                 }
                               }}
                               className={cn(
-                                "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
                                 selectedMonths.includes(month)
-                                  ? "bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20"
-                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                                  ? "bg-[#FF4D00] border-[#FF4D00] text-white shadow-lg shadow-kraken-orange/20"
+                                  : "bg-neutral-100 border-transparent dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                               )}
                             >
                               {month.substring(0, 3)}
@@ -565,11 +573,15 @@ export default function NewBudget() {
                         </div>
                       </div>
 
-                      <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-6">Servicios Habilitados</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Enabled Services Selection */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-5 bg-[#FF4D00] rounded-full" />
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500">Servicios Habilitados</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
                           {availableServices.map(service => (
-                            <div key={service} className="flex items-center gap-3">
+                            <div key={service} className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                               <input 
                                 type="checkbox"
                                 id={`service-${service}`}
@@ -581,19 +593,19 @@ export default function NewBudget() {
                                     setSelectedServices(selectedServices.filter(s => s !== service));
                                   }
                                 }}
-                                className="w-5 h-5 accent-kraken-orange rounded-lg border-neutral-200"
+                                className="w-5 h-5 accent-[#FF4D00] rounded-lg border-neutral-200 dark:border-neutral-700"
                               />
-                              <label htmlFor={`service-${service}`} className="text-sm font-bold text-neutral-600 dark:text-neutral-400 cursor-pointer">{service}</label>
+                              <label htmlFor={`service-${service}`} className="text-xs font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400 cursor-pointer flex-1">{service}</label>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-6 flex items-center gap-3 max-w-sm">
+                        <div className="mt-8 flex items-center gap-3 max-w-sm">
                           <input 
                             type="text"
                             value={newService}
                             onChange={(e) => setNewService(e.target.value)}
-                            placeholder="Nuevo servicio..."
-                            className="kraken-input h-10 text-sm"
+                            placeholder="Añadir otro servicio..."
+                            className="kraken-input h-11 text-xs font-bold uppercase tracking-widest"
                           />
                           <button 
                             type="button"
@@ -604,9 +616,9 @@ export default function NewBudget() {
                                 setNewService('');
                               }
                             }}
-                            className="p-2 bg-neutral-100 dark:bg-neutral-800 text-kraken-orange rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                            className="h-11 w-11 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-[#FF4D00] rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shrink-0"
                           >
-                            <Plus size={20} />
+                            <Plus size={24} />
                           </button>
                         </div>
                       </div>
