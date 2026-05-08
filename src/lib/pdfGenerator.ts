@@ -27,9 +27,12 @@ interface PDFData {
   description: string;
   calculation: CalculationResult;
   materials: Material[];
+  applyIVA?: boolean;
+  isMonthly?: boolean;
+  enabledServices?: string[];
+  selectedDays?: string[];
   language: 'es' | 'pt' | 'en';
   config?: any;
-  includeIVA?: boolean;
 }
 
 const translations = {
@@ -462,13 +465,9 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setTextColor(209, 4, 41); // Kraken Red
   
   const subtotal = data.calculation.subtotal;
-  const includeIVA = data.includeIVA !== false; // default true
+  const showIVA = data.applyIVA !== false;
   
-  if (includeIVA) {
-    doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € + ${t.ivaLabel}`, pageWidth - margin, currentY, { align: 'right' });
-  } else {
-    doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
-  }
+  doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € ${showIVA ? `+ ${t.ivaLabel}` : ''}`, pageWidth - margin, currentY, { align: 'right' });
 
   // 7. Información de Pago
   checkPageBreak(30);
