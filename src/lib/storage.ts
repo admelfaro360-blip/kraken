@@ -127,6 +127,17 @@ export const deleteClient = async (id: string) => {
   }
 };
 
+export const getBudgetsByClientId = async (clientId: string): Promise<Budget[]> => {
+  try {
+    const q = query(collection(db, BUDGETS_COLLECTION), where('clientId', '==', clientId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.data() as Budget);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, BUDGETS_COLLECTION);
+    return [];
+  }
+};
+
 export const fetchPayments = async (): Promise<any[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, PAYMENTS_COLLECTION));
@@ -165,13 +176,139 @@ export const fetchWorkOrders = async (): Promise<WorkOrder[]> => {
   }
 };
 
+export const getStoredWorkOrders = fetchWorkOrders;
+
+export const saveWorkOrder = async (order: WorkOrder) => {
+  try {
+    await setDoc(doc(db, WORK_ORDERS_COLLECTION, order.id), order);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, WORK_ORDERS_COLLECTION);
+  }
+};
+
+export const deleteWorkOrder = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, WORK_ORDERS_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, WORK_ORDERS_COLLECTION);
+  }
+};
+
+export const fetchExpenses = async (): Promise<Expense[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, EXPENSES_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as Expense);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, EXPENSES_COLLECTION);
+    return [];
+  }
+};
+
+export const getStoredExpenses = fetchExpenses;
+
+export const saveExpense = async (expense: Expense) => {
+  try {
+    await setDoc(doc(db, EXPENSES_COLLECTION, expense.id), expense);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, EXPENSES_COLLECTION);
+  }
+};
+
+export const deleteExpense = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, EXPENSES_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, EXPENSES_COLLECTION);
+  }
+};
+
+export const fetchConfig = async (): Promise<any> => {
+  try {
+    const docSnap = await getDoc(doc(db, CONFIG_COLLECTION, 'business'));
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    // Return default config if none exists
+    return {
+      fixedCosts: [
+        { id: '1', name: 'Seguro Responsabilidad Civil', amount: 5 },
+        { id: '2', name: 'Seguro Accidentes Laborales', amount: 190 },
+        { id: '3', name: 'Seguro Camioneta', amount: 21 },
+        { id: '4', name: 'Mantenimiento Vehículo', amount: 100 },
+        { id: '5', name: 'Gestión Empresa (Magency)', amount: 300 }
+      ],
+      variableCosts: [],
+      daysPerMonth: 24,
+      halfDayCostOficial: 40,
+      halfDayCostAyudante: 30,
+      guaranteePct: 0.08,
+      materialMarkup: 0.25,
+      iva: 0.23,
+      transportZones: [
+        { id: 1, name: 'Zona 1 (Base)', amount: 10 },
+        { id: 2, name: 'Zona 2', amount: 15 },
+        { id: 3, name: 'Zona 3', amount: 20 },
+        { id: 4, name: 'Zona 4', amount: 30 }
+      ]
+    };
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, CONFIG_COLLECTION);
+    return null;
+  }
+};
+
+export const saveConfig = async (config: any) => {
+  try {
+    await setDoc(doc(db, CONFIG_COLLECTION, 'business'), config);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, CONFIG_COLLECTION);
+  }
+};
+
+export const fetchUsers = async (): Promise<any[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, USERS_COLLECTION);
+    return [];
+  }
+};
+
+export const saveUser = async (user: any) => {
+  try {
+    await setDoc(doc(db, USERS_COLLECTION, user.id), user);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, USERS_COLLECTION);
+  }
+};
+
+export const deleteUser = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, USERS_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, USERS_COLLECTION);
+  }
+};
+
 export const getUserById = async (id: string): Promise<any | null> => {
   try {
     const docSnap = await getDoc(doc(db, USERS_COLLECTION, id));
-    return docSnap.exists() ? docSnap.data() : null;
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, USERS_COLLECTION);
     return null;
   }
 };
-// ... rest of the storage functions (Expenses, Config, etc) keep existing implementation
+
+export const resetAllData = async () => {
+  // Resetting Firestore data is more complex than localStorage.
+  // For simplicity, we'll just reload the page for now.
+  window.location.reload();
+};
