@@ -206,12 +206,17 @@ export default function Budgets() {
       if (!matchesSearch) return false;
 
       if (!isAccumulated) {
+        // Use a robust way to compare months and years
         const budgetDate = new Date(budget.date);
-        const budgetYear = budgetDate.getFullYear();
-        const budgetMonth = format(budgetDate, 'MMMM', { locale: es });
-        const capitalizedBudgetMonth = budgetMonth.charAt(0).toUpperCase() + budgetMonth.slice(1);
+        if (isNaN(budgetDate.getTime())) return false;
 
-        return budgetYear === selectedYear && capitalizedBudgetMonth === selectedMonth;
+        const budgetYear = budgetDate.getFullYear();
+        const budgetMonthIndex = budgetDate.getMonth();
+        
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const selectedMonthIndex = monthNames.indexOf(selectedMonth);
+
+        return budgetYear === selectedYear && budgetMonthIndex === selectedMonthIndex;
       }
 
       return true;
@@ -219,10 +224,19 @@ export default function Budgets() {
 
     if (sortConfig !== null) {
       sortableBudgets.sort((a: any, b: any) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Special handling for dates
+        if (sortConfig.key === 'date') {
+          aValue = new Date(a.date).getTime();
+          bValue = new Date(b.date).getTime();
+        }
+
+        if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aValue > bValue) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
