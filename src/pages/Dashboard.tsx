@@ -212,14 +212,15 @@ function Dashboard() {
   const filterByPeriod = React.useCallback((items: any[]) => {
     if (isAccumulated) return items;
     const monthIdx = getMonthIndex(period);
-    const start = startOfMonth(new Date(parseInt(year), monthIdx));
-    const end = endOfMonth(new Date(parseInt(year), monthIdx));
+    const targetYear = parseInt(year);
     
     return items.filter(item => {
-      const rawDate = item.date || item.startDate || item.createdAt;
+      const rawDate = item.date || item.createdAt;
       if (!rawDate) return false;
       const dateStr = formatFirebaseDate(rawDate);
-      return isWithinInterval(parseISO(dateStr), { start, end });
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return false;
+      return d.getUTCFullYear() === targetYear && d.getUTCMonth() === monthIdx;
     });
   }, [isAccumulated, period, year, getMonthIndex]);
 
@@ -235,57 +236,51 @@ function Dashboard() {
       ['aprobado', 'ejecucion', 'finalizado', 'cobrado'].includes(b.status)
     );
 
-    // 1. TOTAL FACTURADO: Sumatoria del 'Total General' de presupuestos aprobados
-    const totalFacturadoConIVA = approvedBudgets
-      .filter(b => b.applyIVA !== false)
-      .reduce((acc, b) => acc + (b.total || 0), 0);
-    
-    const totalFacturadoSinIVA = approvedBudgets
-      .filter(b => b.applyIVA === false)
-      .reduce((acc, b) => acc + (b.total || 0), 0);
-
-    // 2. PRESUPUESTOS: Conteo total del mes
-    const totalBudgetsCount = filteredBudgets.length;
-
-    // 3. TASA DE APROBACIÓN: (Aprobados / Total) * 100
-    const approvalRate = totalBudgetsCount > 0 ? (approvedBudgets.length / totalBudgetsCount) * 100 : 0;
-
-    // 4. CLIENTES ÚNICOS: Set de IDs de clientes en presupuestos y cobros
-    const clientsFromBudgets = filteredBudgets.map(b => b.clientId);
-    const clientsFromPayments = filteredPayments.map(p => p.clientId);
-    const uniqueClientsCount = new Set([...clientsFromBudgets, ...clientsFromPayments]).size;
-
-    // 5, 6, 7. IVA, Ganancia Neta, Estructura y MO
-    let totalIVA = 0;
-    let totalMarginReal = 0;
-    let totalStructureCost = 0;
-    let totalLaborCost = 0;
+    // Calculate all totals from approved budgets
+    let totalRevenueConIVA = 0;
+    let totalRevenueSinIVA = 0;
+    let totalCalculatedIVA = 0;
+    let totalEstimatedMargin = 0;
+    let totalEstimatedStructureCost = 0;
+    let totalEstimatedLaborCost = 0;
 
     approvedBudgets.forEach(b => {
       const client = clients.find(c => c.id === b.clientId || c.name === b.clientId);
       const zone = client ? client.zone : 1;
-      const calc = calculateBudget(b.phases, b.materials, config, zone, b.marginPct);
+      // Prefer stored calculation if available to maintain historical consistency
+      const calc = b.calculation || calculateBudget(b.phases, b.materials, config, zone, b.marginPct);
       
-      totalIVA += calc.iva;
-      totalMarginReal += calc.marginEur;
-      totalStructureCost += calc.structureTotal;
-      totalLaborCost += calc.moTotal;
+      const hasIVA = b.applyIVA !== false;
+      
+      // Use stored values if they exist, otherwise use calculation results
+      const subtotal = Number(b.subtotal || calc.subtotal || 0);
+      const iva = hasIVA ? Number(b.iva || calc.iva || (subtotal * config.iva)) : 0;
+      const margin = Number(b.margin || calc.marginEur || 0);
+
+      if (hasIVA) {
+        totalRevenueConIVA += subtotal;
+        totalCalculatedIVA += iva;
+      } else {
+        totalRevenueSinIVA += subtotal;
+      }
+
+      totalEstimatedMargin += margin;
+      totalEstimatedStructureCost += calc.structureTotal;
+      totalEstimatedLaborCost += calc.moTotal;
     });
 
-    const totalExpenses = filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
-    const netProfit = totalMarginReal - totalExpenses;
-
+    // Final Metrics
     setMetrics({
-      totalFacturadoConIVA,
-      totalFacturadoSinIVA,
-      totalBudgets: totalBudgetsCount,
-      approvalRate,
-      uniqueClients: uniqueClientsCount,
-      totalIVA,
-      netProfit,
-      structureExpenses: totalStructureCost,
-      laborExpenses: totalLaborCost,
-      totalExpenses
+      totalFacturadoConIVA: totalRevenueConIVA,
+      totalFacturadoSinIVA: totalRevenueSinIVA,
+      totalBudgets: filteredBudgets.length,
+      approvalRate: filteredBudgets.length > 0 ? (approvedBudgets.length / filteredBudgets.length) * 100 : 0,
+      uniqueClients: new Set([...filteredBudgets.map(b => b.clientId), ...filteredPayments.map(p => p.clientId)]).size,
+      totalIVA: totalCalculatedIVA,
+      netProfit: totalEstimatedMargin,
+      structureExpenses: totalEstimatedStructureCost,
+      laborExpenses: totalEstimatedLaborCost,
+      totalExpenses: filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0)
     });
   }, [filteredBudgets, filteredPayments, filteredExpenses, config, clients, loading]);
 
