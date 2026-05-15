@@ -566,8 +566,25 @@ export default function NewBudget() {
                 </div>
 
                 <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-8">
-                  {/* Switches Row */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Switches and Margin Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-4 sm:p-6 rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 flex flex-col items-start gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#FF4D00]">Rentabilidad</label>
+                        <span className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200">Margen Ganancia</span>
+                      </div>
+                      <div className="relative w-full">
+                        <input 
+                          type="number" 
+                          value={marginPct}
+                          onChange={(e) => setMarginPct(Number(e.target.value))}
+                          className="kraken-input h-10 w-full pr-10 text-right font-black text-sm"
+                          placeholder="30"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-black text-xs">%</div>
+                      </div>
+                    </div>
+
                     <div className="p-4 sm:p-6 rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] font-black uppercase tracking-widest text-[#FF4D00]">IVA (23%)</label>
