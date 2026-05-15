@@ -111,20 +111,26 @@ export default function Budgets() {
       try {
         const stored = await fetchBudgets();
         
-        const formattedBudgets = stored.map((sb: any) => ({
-          ...sb,
-          client: sb.clientName || sb.clientId || 'Cliente',
-          phone: sb.clientPhone || 'N/A',
-          address: sb.clientAddress || 'N/A',
-          vertical: sb.clientVertical || 'hogar',
-          isMonthly: sb.isMonthly || false,
-          enabledServices: sb.enabledServices || [],
-          selectedMonths: sb.selectedMonths || [],
-          selectedDays: sb.selectedDays || [],
-          date: new Date(formatFirebaseDate(sb.date)),
-          subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
-          total: Number(sb.total || sb.calculation?.total) || 0
-        }));
+        const formattedBudgets = stored.map((sb: any) => {
+          const rawDate = sb.date || sb.createdAt;
+          const dateStr = formatFirebaseDate(rawDate);
+          const dateObj = new Date(dateStr);
+          
+          return {
+            ...sb,
+            client: sb.clientName || sb.clientId || 'Cliente',
+            phone: sb.clientPhone || 'N/A',
+            address: sb.clientAddress || 'N/A',
+            vertical: sb.clientVertical || 'hogar',
+            isMonthly: sb.isMonthly || false,
+            enabledServices: sb.enabledServices || [],
+            selectedMonths: sb.selectedMonths || [],
+            selectedDays: sb.selectedDays || [],
+            date: dateObj,
+            subtotal: Number(sb.subtotal || sb.calculation?.subtotal || (Number(sb.total) / 1.23)) || 0,
+            total: Number(sb.total || sb.calculation?.total) || 0
+          };
+        });
 
         setBudgets(formattedBudgets);
       } catch (error) {
@@ -206,12 +212,11 @@ export default function Budgets() {
       if (!matchesSearch) return false;
 
       if (!isAccumulated) {
-        // Use a robust way to compare months and years
-        const budgetDate = new Date(budget.date);
+        const budgetDate = budget.date;
         if (isNaN(budgetDate.getTime())) return false;
 
-        const budgetYear = budgetDate.getFullYear();
-        const budgetMonthIndex = budgetDate.getMonth();
+        const budgetYear = budgetDate.getUTCFullYear();
+        const budgetMonthIndex = budgetDate.getUTCMonth();
         
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const selectedMonthIndex = monthNames.indexOf(selectedMonth);
