@@ -30,12 +30,21 @@ import {
   addWeeks
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { fetchBudgets, fetchWorkOrders } from '../lib/storage';
-import { Budget, WorkOrder } from '../types';
+import { 
+  fetchBudgets, 
+  fetchWorkOrders, 
+  deleteWorkOrder,
+  fetchAgendaNotes,
+  saveAgendaNote,
+  deleteAgendaNote
+} from '../lib/storage';
+import { Budget, WorkOrder, AgendaNote } from '../types';
 import { formatFirebaseDate } from '../lib/utils';
 import { generateWeeklyAgendaPDF, WeeklyAgendaPDFData } from '../lib/pdfGenerator';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { toast } from 'sonner';
+import { X } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -67,25 +76,54 @@ const getClientColor = (clientName: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-import { toast } from 'sonner';
-
 export default function Agenda() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [agendaNotes, setAgendaNotes] = useState<AgendaNote[]>([]);
   const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
 
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Note Modal State
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<AgendaNote | null>(null);
+  const [noteForm, setNoteForm] = useState({
+    title: '',
+    content: ''
+  });
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [b, o] = await Promise.all([
+        const [b, o, n] = await Promise.all([
           fetchBudgets(),
-          fetchWorkOrders()
+          fetchWorkOrders(),
+          fetchAgendaNotes()
         ]);
+        
+        setAgendaNotes(n);
+        // Auto-cleanup for ESPACIO FLUOR June/July 2026
+        const toDelete = o.filter(wo => {
+          if (!wo.clientName || !wo.startDate) return false;
+          const isTargetClient = wo.clientName.toUpperCase().includes('FLUOR');
+          const dateStr = formatFirebaseDate(wo.startDate);
+          const date = new Date(dateStr);
+          const isTargetDate = date.getFullYear() === 2026 && (date.getMonth() === 5 || date.getMonth() === 6);
+          return isTargetClient && isTargetDate;
+        });
+
+        if (toDelete.length > 0) {
+          console.log(`🧹 Cleaning up ${toDelete.length} work orders in Agenda...`);
+          await Promise.all(toDelete.map(wo => deleteWorkOrder(wo.id)));
+          const finalOrders = await fetchWorkOrders();
+          setWorkOrders(finalOrders);
+          toast.success(`Eliminadas ${toDelete.length} órdenes de FLUOR de la agenda.`);
+        } else {
+          setWorkOrders(o);
+        }
+        
         setBudgets(b);
-        setWorkOrders(o);
       } catch (error) {
         console.error('Error loading agenda data:', error);
       }
@@ -132,7 +170,73 @@ export default function Agenda() {
       
       return checkDay >= startDay && checkDay <= endDay;
     });
-    return { budgets: dayBudgets, orders: dayOrders };
+    const dayNotes = agendaNotes.filter(n => {
+      const noteDateStr = n.date.split('T')[0];
+      const checkDayStr = format(day, 'yyyy-MM-dd');
+      return noteDateStr === checkDayStr;
+    });
+
+    return { budgets: dayBudgets, orders: dayOrders, notes: dayNotes };
+  };
+
+  const handleDayDoubleClick = (day: Date) => {
+    const existingNotesForDay = agendaNotes.filter(n => {
+      const noteDateStr = n.date.split('T')[0];
+      const checkDayStr = format(day, 'yyyy-MM-dd');
+      return noteDateStr === checkDayStr;
+    });
+
+    if (existingNotesForDay.length > 0) {
+      setEditingNote(existingNotesForDay[0]);
+      setNoteForm({
+        title: existingNotesForDay[0].title,
+        content: existingNotesForDay[0].content || ''
+      });
+    } else {
+      setEditingNote(null);
+      setNoteForm({ title: '', content: '' });
+    }
+    setSelectedDay(day);
+    setIsNoteModalOpen(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (!noteForm.title.trim() || !selectedDay) return;
+
+    const noteToSave: AgendaNote = {
+      id: editingNote?.id || `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: noteForm.title,
+      content: noteForm.content,
+      date: format(selectedDay, 'yyyy-MM-dd'),
+      createdAt: editingNote?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await saveAgendaNote(noteToSave);
+      toast.success(editingNote ? "Nota actualizada" : "Nota guardada");
+      setIsNoteModalOpen(false);
+      
+      const notes = await fetchAgendaNotes();
+      setAgendaNotes(notes);
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast.error("Hubo un error al guardar la nota");
+    }
+  };
+
+  const handleDeleteNote = async (id: string) => {
+    try {
+      await deleteAgendaNote(id);
+      toast.success("Nota eliminada");
+      setIsNoteModalOpen(false);
+      
+      const notes = await fetchAgendaNotes();
+      setAgendaNotes(notes);
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      toast.error("Hubo un error al eliminar la nota");
+    }
   };
 
   const handleDownloadPDF = async (formatType: 'pc' | 'mobile') => {
@@ -228,7 +332,7 @@ export default function Agenda() {
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
 
-  const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : { budgets: [], orders: [] };
+  const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : { budgets: [], orders: [], notes: [] };
 
   return (
     <div className="space-y-8">
@@ -241,7 +345,7 @@ export default function Agenda() {
           <button 
             onClick={() => handleDownloadPDF('pc')}
             disabled={isGenerating}
-            className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            className="kraken-btn-secondary !h-11 !px-4 text-sm"
           >
             <FileText size={18} />
             <span>{isGenerating ? 'Generando...' : 'PDF Desktop'}</span>
@@ -249,7 +353,7 @@ export default function Agenda() {
           <button 
             onClick={() => handleDownloadPDF('mobile')}
             disabled={isGenerating}
-            className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            className="kraken-btn-secondary !h-11 !px-4 text-sm"
           >
             <Smartphone size={18} />
             <span>{isGenerating ? 'Generando...' : 'PDF Mobile'}</span>
@@ -257,7 +361,7 @@ export default function Agenda() {
           <button 
             onClick={handleSendReminder}
             disabled={isGenerating}
-            className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="kraken-btn !h-12 !px-6 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
           >
             <Send size={20} />
             <span>{isGenerating ? 'Generando...' : 'Enviar a Eduardo'}</span>
@@ -268,7 +372,7 @@ export default function Agenda() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calendar Column */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+          <div className="kraken-card">
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
               <h2 className="text-xl font-bold capitalize dark:text-white">
                 {format(currentDate, 'MMMM yyyy', { locale: es })}
@@ -293,8 +397,7 @@ export default function Agenda() {
 
             <div className="grid grid-cols-7">
               {calendarDays.map((day, i) => {
-                const { budgets: b, orders: o } = getEventsForDay(day);
-                const hasEvents = b.length > 0 || o.length > 0;
+                const { budgets: b, orders: o, notes: n } = getEventsForDay(day);
                 const isSelected = selectedDay && isSameDay(day, selectedDay);
                 const isCurrentMonth = isSameMonth(day, monthStart);
 
@@ -302,6 +405,7 @@ export default function Agenda() {
                   <button
                     key={i}
                     onClick={() => setSelectedDay(day)}
+                    onDoubleClick={() => handleDayDoubleClick(day)}
                     className={cn(
                       "min-h-[100px] p-2 border-r border-b border-neutral-50 dark:border-neutral-800/50 flex flex-col items-start gap-1 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800/30",
                       !isCurrentMonth && "opacity-30",
@@ -317,6 +421,12 @@ export default function Agenda() {
                     </span>
                     
                     <div className="w-full space-y-1 mt-1">
+                      {n.map((note, idx) => (
+                        <div key={idx} className="text-[8px] px-1.5 py-0.5 rounded truncate font-bold leading-tight bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex flex-col">
+                          <span>{note.title}</span>
+                          <span className="text-[6px] opacity-70 uppercase tracking-tighter">NOTA</span>
+                        </div>
+                      ))}
                       {b.map((item, idx) => (
                         <div key={idx} className={cn(
                           "text-[8px] px-1.5 py-0.5 rounded truncate font-bold leading-tight border flex flex-col",
@@ -345,22 +455,43 @@ export default function Agenda() {
 
         {/* Details Column */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 p-6">
+          <div className="kraken-card p-6">
             <h3 className="text-lg font-bold mb-4 dark:text-white flex items-center gap-2">
               <CalendarIcon size={20} className="text-kraken-orange" />
               <span>{selectedDay ? format(selectedDay, "EEEE d 'de' MMMM", { locale: es }) : 'Selecciona un día'}</span>
             </h3>
 
             <div className="space-y-4">
-              {selectedDayEvents.budgets.length === 0 && selectedDayEvents.orders.length === 0 ? (
+              {selectedDayEvents.budgets.length === 0 && selectedDayEvents.orders.length === 0 && selectedDayEvents.notes.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <div className="w-12 h-12 bg-neutral-50 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Clock size={24} className="text-neutral-300" />
                   </div>
                   <p className="text-sm text-neutral-500">No hay tareas programadas para este día.</p>
+                  <p className="text-[10px] text-neutral-400 mt-2">Doble click para agregar una nota.</p>
                 </div>
               ) : (
                 <>
+                  {selectedDayEvents.notes.map((n) => (
+                    <div 
+                      key={n.id} 
+                      className="p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 space-y-2 shadow-sm cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                      onClick={() => {
+                        setEditingNote(n);
+                        setNoteForm({ title: n.title, content: n.content || '' });
+                        setIsNoteModalOpen(true);
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <MessageSquare size={12} />
+                          Nota / Recordatorio
+                        </span>
+                      </div>
+                      <h4 className="font-bold leading-tight dark:text-white">{n.title}</h4>
+                      {n.content && <p className="text-xs text-neutral-600 dark:text-neutral-400">{n.content}</p>}
+                    </div>
+                  ))}
                   {selectedDayEvents.budgets.map((b) => (
                     <div key={b.id} className={cn(
                       "p-4 rounded-2xl border space-y-2 shadow-sm",
@@ -423,6 +554,73 @@ export default function Agenda() {
           </div>
         </div>
       </div>
+
+      {/* Note Modal */}
+      {isNoteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsNoteModalOpen(false)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100 dark:border-neutral-800 animate-in fade-in zoom-in duration-200">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tighter dark:text-white">
+                    {editingNote ? 'Editar Nota' : 'Nueva Nota'}
+                  </h3>
+                  <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium mt-1">
+                    {selectedDay && format(selectedDay, "d 'de' MMMM", { locale: es })}
+                  </p>
+                </div>
+                <button onClick={() => setIsNoteModalOpen(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-2xl transition-colors">
+                  <X size={24} className="text-neutral-400" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 ml-1">Título</label>
+                  <input
+                    type="text"
+                    value={noteForm.title}
+                    onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
+                    placeholder="Ej: Comprar materiales"
+                    className="kraken-input w-full"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 ml-1">Contenido (Opcional)</label>
+                  <textarea
+                    value={noteForm.content}
+                    onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
+                    placeholder="Detalles adicionales..."
+                    className="kraken-input w-full min-h-[120px] py-4"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  {editingNote && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(editingNote.id)}
+                      className="flex-1 kraken-btn-secondary !h-14 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSaveNote}
+                    disabled={!noteForm.title.trim()}
+                    className="flex-[2] kraken-btn !h-14 shadow-kraken-orange/20"
+                  >
+                    {editingNote ? 'Actualizar' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
