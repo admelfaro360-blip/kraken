@@ -1,3 +1,12 @@
+export interface AgendaNote {
+  id: string;
+  title: string;
+  content?: string;
+  date: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CostItem {
   id: string;
   name: string;
