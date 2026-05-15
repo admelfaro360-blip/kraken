@@ -22,6 +22,7 @@ import { WorkOrder, Budget } from '../types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatFirebaseDate } from '../lib/utils';
+import { toast } from 'sonner';
 import { useTheme } from '../lib/ThemeContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -147,6 +148,37 @@ export default function WorkOrders() {
     };
     loadData();
   }, [isModalOpen]);
+
+  useEffect(() => {
+    const cleanup = async () => {
+      try {
+        const orders = await fetchWorkOrders();
+        // Target: Client "ESPACIO FLUOR" between June and July 2026
+        const toDelete = orders.filter(wo => {
+          if (!wo.clientName || !wo.startDate) return false;
+          // Use 'FLUOR' to catch variations like 'ESPACIO' or 'ESPAÇO'
+          const isTargetClient = wo.clientName.toUpperCase().includes('FLUOR');
+          const dateStr = formatFirebaseDate(wo.startDate);
+          const date = new Date(dateStr);
+          // 5 = June, 6 = July
+          const isTargetDate = date.getUTCFullYear() === 2026 && (date.getUTCMonth() === 5 || date.getUTCMonth() === 6);
+          return isTargetClient && isTargetDate;
+        });
+
+        if (toDelete.length > 0) {
+          console.log(`🧹 Cleaning up ${toDelete.length} work orders for ESPACIO FLUOR...`);
+          await Promise.all(toDelete.map(wo => deleteWorkOrder(wo.id)));
+          // Refresh state
+          const remaining = await fetchWorkOrders();
+          setWorkOrders(remaining);
+          toast.success(`Se han eliminado ${toDelete.length} órdenes de trabajo de ESPACIO FLUOR (Junio-Julio 2026).`);
+        }
+      } catch (err) {
+        console.error('Error during automatic cleanup:', err);
+      }
+    };
+    cleanup();
+  }, []);
 
   const getMonthIndex = (monthName: string) => {
     return monthsList.indexOf(monthName);
