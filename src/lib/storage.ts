@@ -1,4 +1,4 @@
-import { Budget, Client, WorkOrder, Expense } from '../types';
+import { Budget, Client, WorkOrder, Expense, AgendaNote } from '../types';
 import { db, auth } from './firebase';
 import { 
   collection, 
@@ -18,6 +18,7 @@ const WORK_ORDERS_COLLECTION = 'work_orders';
 const EXPENSES_COLLECTION = 'expenses';
 const CONFIG_COLLECTION = 'config';
 const USERS_COLLECTION = 'users';
+const AGENDA_NOTES_COLLECTION = 'agenda_notes';
 
 enum OperationType {
   CREATE = 'create',
@@ -93,8 +94,23 @@ export const saveBudget = async (budget: Budget) => {
   }
 };
 
+export const deleteWorkOrdersByBudgetId = async (budgetId: string) => {
+  try {
+    const q = query(collection(db, WORK_ORDERS_COLLECTION), where('budgetId', '==', budgetId));
+    const querySnapshot = await getDocs(q);
+    const deletePromises = querySnapshot.docs.map(document => deleteDoc(doc(db, WORK_ORDERS_COLLECTION, document.id)));
+    await Promise.all(deletePromises);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, WORK_ORDERS_COLLECTION);
+  }
+};
+
 export const deleteBudget = async (id: string) => {
   try {
+    // Cascade delete work orders related to this budget
+    await deleteWorkOrdersByBudgetId(id);
+    
+    // Delete the budget itself
     await deleteDoc(doc(db, BUDGETS_COLLECTION, id));
   } catch (e) {
     handleFirestoreError(e, OperationType.DELETE, BUDGETS_COLLECTION);
@@ -314,6 +330,32 @@ export const getUserById = async (id: string): Promise<any | null> => {
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, USERS_COLLECTION);
     return null;
+  }
+};
+
+export const fetchAgendaNotes = async (): Promise<AgendaNote[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, AGENDA_NOTES_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as AgendaNote);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, AGENDA_NOTES_COLLECTION);
+    return [];
+  }
+};
+
+export const saveAgendaNote = async (note: AgendaNote) => {
+  try {
+    await setDoc(doc(db, AGENDA_NOTES_COLLECTION, note.id), note);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, AGENDA_NOTES_COLLECTION);
+  }
+};
+
+export const deleteAgendaNote = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, AGENDA_NOTES_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, AGENDA_NOTES_COLLECTION);
   }
 };
 
