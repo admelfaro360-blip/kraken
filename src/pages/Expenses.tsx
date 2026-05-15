@@ -16,6 +16,7 @@ import {
   AlertCircle,
   CreditCard,
   Briefcase,
+  Trophy,
   Target,
   Zap
 } from 'lucide-react';
@@ -29,9 +30,25 @@ import {
   endOfWeek,
   startOfYear,
   endOfYear,
-  endOfDay
+  endOfDay,
+  eachWeekOfInterval,
+  eachMonthOfInterval,
+  isSameWeek
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell,
+  Legend
+} from 'recharts';
 import { toast } from 'sonner';
 import { Expense, Budget, WorkOrder } from '../types';
 import { 
@@ -71,9 +88,9 @@ export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('Todas');
   const [employeeFilter, setEmployeeFilter] = useState<string>('Todos');
-  const [timeFilter, setTimeFilter] = useState<'semana' | 'mes' | 'año' | 'todos' | 'personalizado'>('mes');
-  const [customStartDate, setCustomStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [customEndDate, setCustomEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [viewMode, setViewMode] = useState<'mensual' | 'acumulado'>('mensual');
+  const [selectedYear, setSelectedYear] = useState(format(new Date(), 'yyyy'));
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -112,32 +129,43 @@ export default function Expenses() {
     loadData();
   }, []);
 
+  const monthsList = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const yearsList = useMemo(() => {
+    const currentYear = parseInt(format(new Date(), 'yyyy'));
+    const years = new Set<string>();
+    years.add(currentYear.toString());
+    expenses.forEach(exp => {
+      const year = format(parseISO(formatFirebaseDate(exp.date)), 'yyyy');
+      years.add(year);
+    });
+    return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
+  }, [expenses]);
+
   const timeFilteredExpenses = useMemo(() => {
-    const now = new Date();
+    const year = parseInt(selectedYear);
+    const month = selectedMonth;
+
     let start: Date;
     let end: Date;
 
-    if (timeFilter === 'semana') {
-      start = startOfWeek(now, { locale: es });
-      end = endOfWeek(now, { locale: es });
-    } else if (timeFilter === 'mes') {
-      start = startOfMonth(now);
-      end = endOfMonth(now);
-    } else if (timeFilter === 'año') {
-      start = startOfYear(now);
-      end = endOfYear(now);
-    } else if (timeFilter === 'personalizado') {
-      start = parseISO(customStartDate);
-      end = endOfDay(parseISO(customEndDate));
+    if (viewMode === 'mensual') {
+      start = new Date(year, month, 1);
+      end = endOfMonth(start);
     } else {
-      return expenses;
+      // Acumulado: from Jan 1st of selected year to end of selected month
+      start = startOfYear(new Date(year, month, 1));
+      end = endOfMonth(new Date(year, month, 1));
     }
 
     return expenses.filter(exp => {
       const date = parseISO(formatFirebaseDate(exp.date));
       return isWithinInterval(date, { start, end });
     });
-  }, [expenses, timeFilter, customStartDate, customEndDate]);
+  }, [expenses, viewMode, selectedYear, selectedMonth]);
 
   const filteredExpenses = useMemo(() => {
     return timeFilteredExpenses.filter(exp => {
@@ -167,6 +195,73 @@ export default function Expenses() {
     
     return { total, mo, materials, fixed };
   }, [filteredExpenses]);
+
+  const weeklyData = useMemo(() => {
+    const now = new Date(parseInt(selectedYear), selectedMonth, 1);
+    let start: Date;
+    let end: Date;
+
+    if (viewMode === 'acumulado') {
+      start = startOfYear(now);
+      end = endOfMonth(now);
+      const months = eachMonthOfInterval({ start, end });
+      
+      return months.map(monthStart => {
+        const monthEnd = endOfMonth(monthStart);
+        const monthExpensesValue = expenses.filter(exp => {
+          const date = parseISO(formatFirebaseDate(exp.date));
+          return isWithinInterval(date, { start: monthStart, end: monthEnd });
+        });
+        
+        return {
+          name: format(monthStart, 'MMM', { locale: es }),
+          monto: monthExpensesValue.reduce((sum, exp) => sum + Number(exp.amount), 0)
+        };
+      });
+    }
+
+    start = startOfMonth(now);
+    end = endOfMonth(now);
+
+    const weeks = eachWeekOfInterval({ start, end }, { locale: es });
+    
+    return weeks.map((weekStart, index) => {
+      const weekEnd = endOfWeek(weekStart, { locale: es });
+      const weekExpenses = filteredExpenses.filter(exp => {
+        const date = parseISO(formatFirebaseDate(exp.date));
+        return isWithinInterval(date, { start: weekStart, end: weekEnd });
+      });
+      
+      return {
+        name: `Sem. ${index + 1}`,
+        monto: weekExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0)
+      };
+    });
+  }, [filteredExpenses, viewMode, selectedYear, selectedMonth]);
+
+  const categoryData = useMemo(() => {
+    if (categoryFilter === 'Costos Fijos') {
+      return FIXED_COST_SUB_CATEGORIES.map(sub => ({
+        name: sub,
+        value: filteredExpenses.filter(exp => exp.category === 'Costos Fijos' && exp.subCategory === sub).reduce((sum, exp) => sum + Number(exp.amount), 0)
+      })).filter(item => item.value > 0);
+    }
+    return CATEGORIES.map(cat => ({
+      name: cat,
+      value: filteredExpenses.filter(exp => exp.category === cat).reduce((sum, exp) => sum + Number(exp.amount), 0)
+    })).filter(item => item.value > 0);
+  }, [filteredExpenses, categoryFilter]);
+
+  const employeePaymentData = useMemo(() => {
+    return employees.map(emp => ({
+      name: emp.username || emp.email,
+      value: filteredExpenses.filter(exp => 
+        exp.employeeId === emp.id || 
+        exp.employeeId === emp.username || 
+        exp.employeeId === emp.email
+      ).reduce((sum, exp) => sum + Number(exp.amount), 0)
+    })).filter(item => item.value > 0);
+  }, [filteredExpenses, employees]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,6 +345,104 @@ export default function Expenses() {
     setIsModalOpen(true);
   };
 
+  const performanceRanking = useMemo(() => {
+    if (employees.length === 0) return [];
+
+    const year = parseInt(selectedYear);
+    const month = selectedMonth;
+
+    let timeStart: Date;
+    let timeEnd: Date;
+
+    if (viewMode === 'mensual') {
+      timeStart = new Date(year, month, 1);
+      timeEnd = endOfMonth(timeStart);
+    } else {
+      timeStart = startOfYear(new Date(year, month, 1));
+      timeEnd = endOfMonth(new Date(year, month, 1));
+    }
+
+    return employees.map(emp => {
+      // Cost: Expenses for this employee in the selected time period
+      const empTerms = [emp.id, emp.username, emp.email, emp.displayName].filter(Boolean).map(s => s.toLowerCase().trim());
+      const cost = timeFilteredExpenses
+        .filter(exp => {
+          const expEmpId = (exp.employeeId || '').toLowerCase().trim();
+          return empTerms.includes(expEmpId);
+        })
+        .reduce((sum, exp) => sum + Number(exp.amount), 0);
+
+      // Production: Value generated from budgets based on Work Orders
+      const production = budgets
+        .filter(b => {
+          // Status check
+          const isValidStatus = ['finalizado', 'cobrado', 'aprobado', 'ejecucion'].includes(b.status);
+          return isValidStatus;
+        })
+        .reduce((sum, b) => {
+          // Get all active Work Orders for this budget
+          const budgetWOs = workOrders.filter(wo => wo.budgetId === b.id && wo.status !== 'cancelada');
+          
+          // Find WOs where this employee is assigned
+          const employeeWOs = budgetWOs.filter(wo => {
+            const isAssignedInMain = wo.assignedTo?.some(person => 
+              empTerms.includes((person || '').toLowerCase().trim())
+            );
+
+            const isAssignedInPhases = wo.phases?.some(phase => 
+              phase.labor.some(labor => 
+                labor.assignedPerson && empTerms.includes(labor.assignedPerson.toLowerCase().trim())
+              )
+            );
+
+            return isAssignedInMain || isAssignedInPhases;
+          });
+
+          if (employeeWOs.length === 0) return sum;
+
+          // Check if any of these WOs fall within the time period
+          // This ensures production aligns with work/payment timing
+          const isInPeriod = employeeWOs.some(wo => {
+            if (!timeStart || !timeEnd) return true;
+            // Use WO start date if available, otherwise fallback to budget date
+            const woDateStr = wo.startDate || formatFirebaseDate(b.date);
+            const woDate = parseISO(woDateStr);
+            return isWithinInterval(woDate, { start: timeStart, end: timeEnd });
+          });
+
+          if (!isInPeriod) return sum;
+          
+          // Split value among all unique workers involved in the budget's work orders
+          const uniqueWorkers = new Set();
+          budgetWOs.forEach(w => {
+            // Add from main assigned list
+            w.assignedTo?.forEach(person => uniqueWorkers.add(person.toLowerCase().trim()));
+            // Add from phases
+            w.phases?.forEach(phase => {
+              phase.labor.forEach(labor => {
+                if (labor.assignedPerson) uniqueWorkers.add(labor.assignedPerson.toLowerCase().trim());
+              });
+            });
+          });
+          
+          const workerCount = uniqueWorkers.size || 1;
+          const budgetValue = Number((b.calculation?.subtotal || b.subtotal || 0) - (b.calculation?.materialsFactured || 0));
+          return sum + (budgetValue / workerCount);
+        }, 0);
+
+      const efficiency = cost > 0 ? (production / cost) : (production > 0 ? 10 : 0);
+
+      return {
+        id: emp.id,
+        name: emp.username || emp.email,
+        cost,
+        production,
+        efficiency,
+        status: efficiency >= 2.6 ? 'Excelente' : efficiency >= 1.6 ? 'Bueno' : efficiency >= 1.3 ? 'Regular' : efficiency > 0 ? 'Bajo' : 'Sin Datos'
+      };
+    }).sort((a, b) => b.efficiency - a.efficiency);
+  }, [employees, timeFilteredExpenses, budgets, expenses, workOrders, viewMode, selectedYear, selectedMonth]);
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -285,7 +478,7 @@ export default function Expenses() {
               <TrendingDown size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Gastado ({timeFilter})</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Gastado ({viewMode === 'mensual' ? monthsList[selectedMonth] : 'Acumulado'})</p>
               <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{stats.total.toLocaleString('de-DE')} €</h3>
             </div>
           </div>
@@ -296,7 +489,7 @@ export default function Expenses() {
               <UsersIcon size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Mano de Obra ({timeFilter})</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Mano de Obra ({viewMode === 'mensual' ? monthsList[selectedMonth] : 'Acumulado'})</p>
               <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{stats.mo.toLocaleString('de-DE')} €</h3>
             </div>
           </div>
@@ -307,7 +500,7 @@ export default function Expenses() {
               <Package size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Materiales ({timeFilter})</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Materiales ({viewMode === 'mensual' ? monthsList[selectedMonth] : 'Acumulado'})</p>
               <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{stats.materials.toLocaleString('de-DE')} €</h3>
             </div>
           </div>
@@ -318,7 +511,7 @@ export default function Expenses() {
               <DollarSign size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Gastos Fijos ({timeFilter})</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Gastos Fijos ({viewMode === 'mensual' ? monthsList[selectedMonth] : 'Acumulado'})</p>
               <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{stats.fixed.toLocaleString('de-DE')} €</h3>
             </div>
           </div>
@@ -327,45 +520,50 @@ export default function Expenses() {
 
       {/* Filters Bar */}
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex bg-white dark:bg-neutral-900 p-1 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
-          {(['semana', 'mes', 'año', 'personalizado', 'todos'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTimeFilter(t)}
-              className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                timeFilter === t 
-                  ? 'bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20' 
-                  : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-              }`}
-            >
-              {t === 'personalizado' ? 'Rango' : t}
-            </button>
-          ))}
+        <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
+          <button
+            onClick={() => setViewMode('mensual')}
+            className={`px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+              viewMode === 'mensual' 
+                ? 'bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20' 
+                : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            Mensual
+          </button>
+          <button
+            onClick={() => setViewMode('acumulado')}
+            className={`px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+              viewMode === 'acumulado' 
+                ? 'bg-kraken-orange text-white shadow-lg shadow-kraken-orange/20' 
+                : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            Acumulado
+          </button>
         </div>
 
-        {timeFilter === 'personalizado' && (
-          <div className="flex items-center gap-4 bg-white dark:bg-neutral-900 p-2 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm px-4">
-            <div className="flex items-center gap-2">
-              <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Desde:</span>
-              <input 
-                type="date" 
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold uppercase tracking-widest focus:ring-0 text-neutral-600 dark:text-neutral-400 p-0"
-              />
-            </div>
-            <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-800" />
-            <div className="flex items-center gap-2">
-              <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Hasta:</span>
-              <input 
-                type="date" 
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold uppercase tracking-widest focus:ring-0 text-neutral-600 dark:text-neutral-400 p-0"
-              />
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <select 
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="kraken-input h-12 min-w-[120px] font-bold text-sm bg-neutral-100 dark:bg-neutral-800 border-none"
+          >
+            {yearsList.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+
+          <select 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="kraken-input h-12 min-w-[140px] font-bold text-sm bg-neutral-100 dark:bg-neutral-800 border-none"
+          >
+            {monthsList.map((month, idx) => (
+              <option key={month} value={idx}>{month}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="flex-1" />
 
@@ -391,6 +589,188 @@ export default function Expenses() {
             <option value="Todas">Todas las Categorías</option>
             {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
+        </div>
+      </div>
+
+      {/* Performance Ranking Section */}
+      <div className="kraken-card p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-xl font-black flex items-center gap-2">
+              <Trophy size={24} className="text-amber-500" />
+              Ranking de Desempeño y Producción
+              <button 
+                onClick={() => setIsInfoModalOpen(true)}
+                className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-400 hover:text-kraken-orange"
+                title="Ver fórmulas y metodología"
+              >
+                <AlertCircle size={18} />
+              </button>
+            </h3>
+            <p className="text-sm text-neutral-500 font-medium mt-1">Comparativa de Costo vs Producción Real (Basado en presupuestos aprobados/finalizados)</p>
+            
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 mt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Excelente (&gt;= 2.6x)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Bueno (1.6x - 2.5x)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Regular (1.3x - 1.5x)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Bajo (&lt; 1.2x)</span>
+              </div>
+            </div>
+          </div>
+          <div className="px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500">
+            Periodo: {viewMode === 'mensual' ? monthsList[selectedMonth] : 'Acumulado'} - {selectedYear}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {performanceRanking.map((rank, index) => (
+            <div key={rank.id} className="relative p-6 rounded-[32px] border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50 group hover:border-kraken-orange/30 transition-all duration-300">
+              <div className="absolute top-4 right-4 text-4xl font-black text-neutral-200 dark:text-neutral-800 italic group-hover:text-kraken-orange/10 transition-colors">
+                #{index + 1}
+              </div>
+              
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-kraken-orange text-white flex items-center justify-center font-black text-xl">
+                  {rank.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-900 dark:text-white">{rank.name}</h4>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${
+                    rank.status === 'Excelente' ? 'text-emerald-500' :
+                    rank.status === 'Bueno' ? 'text-blue-500' :
+                    rank.status === 'Regular' ? 'text-amber-500' :
+                    rank.status === 'Bajo' ? 'text-red-500' : 'text-neutral-400'
+                  }`}>
+                    {rank.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Costo (Pagos)</p>
+                    <p className="font-black text-neutral-900 dark:text-white">{rank.cost.toLocaleString('de-DE')} €</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Producción</p>
+                    <p className="font-black text-emerald-500">{rank.production.toLocaleString('de-DE')} €</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Eficiencia (ROI)</span>
+                    <span className="font-black text-kraken-orange">{rank.efficiency.toFixed(2)}x</span>
+                  </div>
+                  <div className="h-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${
+                        rank.efficiency >= 2.6 ? 'bg-emerald-500' :
+                        rank.efficiency >= 1.6 ? 'bg-blue-500' :
+                        rank.efficiency >= 1.3 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${Math.min(rank.efficiency * 50, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="kraken-card p-8">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+            <Calendar size={20} className="text-kraken-orange" />
+            {viewMode === 'mensual' ? 'Evolución Semanal' : 'Evolución Mensual'}
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600}} />
+                <Tooltip 
+                  cursor={{fill: 'rgba(255, 77, 0, 0.05)'}}
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                />
+                <Bar dataKey="monto" fill="#FF4D00" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="kraken-card p-8">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+            <Filter size={20} className="text-kraken-orange" />
+            Gastos por Categoría
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                />
+                <Legend iconType="circle" wrapperStyle={{fontSize: '10px'}} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="kraken-card p-8">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+            <UsersIcon size={20} className="text-kraken-orange" />
+            Pagos por Empleado
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={employeePaymentData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {employeePaymentData.map((entry, index) => (
+                    <Cell key={`cell-emp-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                />
+                <Legend iconType="circle" wrapperStyle={{fontSize: '10px'}} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
