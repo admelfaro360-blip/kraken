@@ -1,4 +1,4 @@
-import { Budget, Client, WorkOrder, Expense, AgendaNote } from '../types';
+import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord } from '../types';
 import { db, auth } from './firebase';
 import { 
   collection, 
@@ -19,6 +19,7 @@ const EXPENSES_COLLECTION = 'expenses';
 const CONFIG_COLLECTION = 'config';
 const USERS_COLLECTION = 'users';
 const AGENDA_NOTES_COLLECTION = 'agenda_notes';
+const MAINTENANCE_COLLECTION = 'maintenance';
 
 enum OperationType {
   CREATE = 'create',
@@ -356,6 +357,35 @@ export const deleteAgendaNote = async (id: string) => {
     await deleteDoc(doc(db, AGENDA_NOTES_COLLECTION, id));
   } catch (e) {
     handleFirestoreError(e, OperationType.DELETE, AGENDA_NOTES_COLLECTION);
+  }
+};
+
+export const fetchMaintenances = async (): Promise<MaintenanceRecord[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, MAINTENANCE_COLLECTION));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as MaintenanceRecord[];
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, MAINTENANCE_COLLECTION);
+    return [];
+  }
+};
+
+export const saveMaintenance = async (record: MaintenanceRecord) => {
+  try {
+    await setDoc(doc(db, MAINTENANCE_COLLECTION, record.id), record);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, MAINTENANCE_COLLECTION);
+  }
+};
+
+export const deleteMaintenance = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, MAINTENANCE_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, MAINTENANCE_COLLECTION);
   }
 };
 
