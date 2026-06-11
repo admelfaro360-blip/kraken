@@ -23,7 +23,8 @@
         "name": { "type": "string" },
         "vertical": { "type": "string" },
         "address": { "type": "string" },
-        "phone": { "type": "string" }
+        "phone": { "type": "string" },
+        "clientType": { "type": "string" }
       },
       "required": ["id", "name", "vertical", "address", "phone"]
     },
@@ -67,7 +68,8 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "role": { "type": "string" }
+        "role": { "type": "string" },
+        "allowedModules": { "type": "array" }
       },
       "required": ["id", "role"]
     },
@@ -83,6 +85,23 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "title", "date"]
+    },
+    "MaintenanceRecord": {
+      "title": "MaintenanceRecord",
+      "description": "Ficha de mantenimiento preventivo checklist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientData": { "type": "object" },
+        "date": { "type": "string" },
+        "nextRevisionDate": { "type": "string" },
+        "checklist": { "type": "array" },
+        "generalObservations": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "clientId", "date", "status", "checklist"]
     }
   },
   "firestore": {
@@ -117,6 +136,10 @@
     "agenda_notes": {
       "schema": "AgendaNote",
       "description": "Colección de notas de la agenda"
+    },
+    "maintenance": {
+      "schema": "MaintenanceRecord",
+      "description": "Colección de registros de mantenimiento preventivo"
     }
   }
 }
