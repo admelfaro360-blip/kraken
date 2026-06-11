@@ -14,7 +14,8 @@ import {
   Sun,
   Moon,
   Calendar,
-  TrendingDown
+  TrendingDown,
+  ClipboardCheck
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,13 +27,14 @@ function cn(...inputs: ClassValue[]) {
 
 interface LayoutProps {
   onLogout: () => void;
+  user: any;
 }
 
-export default function Layout({ onLogout }: LayoutProps) {
+export default function Layout({ onLogout, user }: LayoutProps) {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  const navItems = [
+  const baseItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { name: 'Clientes', icon: Users, path: '/clientes' },
     { name: 'Presupuestos', icon: FileText, path: '/presupuestos' },
@@ -41,8 +43,15 @@ export default function Layout({ onLogout }: LayoutProps) {
     { name: 'Cobros', icon: Wallet, path: '/cobros' },
     { name: 'Gastos', icon: TrendingDown, path: '/gastos' },
     { name: 'Reportes', icon: BarChart3, path: '/reportes' },
-    { name: 'Configuración', icon: Settings, path: '/config' },
   ];
+
+  const hasMaintenance = user?.role === 'admin' || user?.allowedModules?.includes('maintenance');
+
+  const navItems = [...baseItems];
+  if (hasMaintenance) {
+    navItems.push({ name: 'Mantenimiento', icon: ClipboardCheck, path: '/mantenimiento' });
+  }
+  navItems.push({ name: 'Configuración', icon: Settings, path: '/config' });
 
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors duration-300">
