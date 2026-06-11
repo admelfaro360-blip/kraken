@@ -88,7 +88,8 @@ export default function Clients() {
     phone: '',
     email: '',
     zone: 1,
-    notes: ''
+    notes: '',
+    clientType: 'Particular'
   });
 
   const handleOpenModal = (client?: Client) => {
@@ -104,7 +105,8 @@ export default function Clients() {
         phone: '',
         email: '',
         zone: 1,
-        notes: ''
+        notes: '',
+        clientType: 'Particular'
       });
     }
     setIsDetailModalOpen(false);
@@ -170,7 +172,7 @@ export default function Clients() {
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+          className="kraken-btn"
         >
           <Plus size={20} />
           <span>Nuevo Cliente</span>
@@ -185,7 +187,7 @@ export default function Clients() {
             placeholder="Buscar por nombre, email o teléfono..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all dark:text-white"
+            className="kraken-input pl-12"
           />
         </div>
         <div className="flex gap-2">
@@ -194,7 +196,7 @@ export default function Clients() {
               onClick={() => setViewMode('grid')}
               className={cn(
                 "p-2 rounded-lg transition-all",
-                viewMode === 'grid' ? "bg-neutral-100 dark:bg-neutral-800 text-kraken-orange" : "text-neutral-400 hover:text-neutral-600"
+                viewMode === 'grid' ? "bg-neutral-100 dark:bg-neutral-800 text-[#FF4D00]" : "text-neutral-400 hover:text-neutral-600"
               )}
             >
               <LayoutGrid size={20} />
@@ -203,7 +205,7 @@ export default function Clients() {
               onClick={() => setViewMode('list')}
               className={cn(
                 "p-2 rounded-lg transition-all",
-                viewMode === 'list' ? "bg-neutral-100 dark:bg-neutral-800 text-kraken-orange" : "text-neutral-400 hover:text-neutral-600"
+                viewMode === 'list' ? "bg-neutral-100 dark:bg-neutral-800 text-[#FF4D00]" : "text-neutral-400 hover:text-neutral-600"
               )}
             >
               <List size={20} />
@@ -222,7 +224,7 @@ export default function Clients() {
             <div 
               key={client.id} 
               onClick={() => handleOpenDetailModal(client)}
-              className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 hover:shadow-md transition-shadow group relative cursor-pointer"
+              className="kraken-card p-6 group relative cursor-pointer"
             >
               <div className="absolute top-4 right-4 flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <button 
@@ -230,7 +232,7 @@ export default function Clients() {
                     e.stopPropagation();
                     handleOpenDetailModal(client);
                   }}
-                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-kraken-orange/10 hover:text-kraken-orange transition-colors"
+                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-[#FF4D00]/10 hover:text-[#FF4D00] transition-colors"
                   title="Ver Detalles"
                 >
                   <Eye size={16} />
@@ -240,7 +242,7 @@ export default function Clients() {
                     e.stopPropagation();
                     handleOpenModal(client);
                   }}
-                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-kraken-orange/10 hover:text-kraken-orange transition-colors"
+                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-[#FF4D00]/10 hover:text-[#FF4D00] transition-colors"
                   title="Editar"
                 >
                   <Edit2 size={16} />
@@ -250,7 +252,7 @@ export default function Clients() {
                     e.stopPropagation();
                     setDeleteConfirmation(client.id);
                   }}
-                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-kraken-orange/10 hover:text-kraken-orange transition-colors"
+                  className="p-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg hover:bg-[#FF4D00]/10 hover:text-[#FF4D00] transition-colors"
                   title="Eliminar"
                 >
                   <Trash2 size={16} />
@@ -304,7 +306,7 @@ export default function Clients() {
                 </button>
                 <button 
                   onClick={() => navigate(`/presupuestos/nuevo?cliente=${encodeURIComponent(client.name)}`)}
-                  className="p-2.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl hover:bg-kraken-orange/10 hover:text-kraken-orange transition-all"
+                  className="p-2.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl hover:bg-[#FF4D00]/10 hover:text-[#FF4D00] transition-all"
                   title="Nuevo Presupuesto"
                 >
                   <Plus size={16} />
@@ -366,7 +368,7 @@ export default function Clients() {
                           e.stopPropagation();
                           navigate(`/presupuestos/nuevo?cliente=${encodeURIComponent(client.name)}`);
                         }}
-                        className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                        className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                         title="Nuevo Presupuesto"
                       >
                         <Plus size={18} />
@@ -376,7 +378,7 @@ export default function Clients() {
                           e.stopPropagation();
                           handleOpenDetailModal(client);
                         }}
-                        className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                        className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                         title="Ver Detalles"
                       >
                         <Eye size={18} />
@@ -386,7 +388,7 @@ export default function Clients() {
                           e.stopPropagation();
                           handleOpenModal(client);
                         }}
-                        className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                        className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                         title="Editar"
                       >
                         <Edit2 size={18} />
@@ -396,7 +398,7 @@ export default function Clients() {
                           e.stopPropagation();
                           setDeleteConfirmation(client.id);
                         }}
-                        className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                        className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                         title="Eliminar"
                       >
                         <Trash2 size={18} />
@@ -432,7 +434,7 @@ export default function Clients() {
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   />
                 </div>
                 <div className="space-y-2">
@@ -440,10 +442,22 @@ export default function Clients() {
                   <select 
                     value={formData.vertical}
                     onChange={(e) => setFormData({ ...formData, vertical: e.target.value as any })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   >
                     <option value="hogar">Hogar (Particular)</option>
                     <option value="industria">Industria (Corporativo)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Tipo de Cliente</label>
+                  <select 
+                    value={formData.clientType || 'Particular'}
+                    onChange={(e) => setFormData({ ...formData, clientType: e.target.value as any })}
+                    className="kraken-input"
+                  >
+                    <option value="Particular">Particular</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -453,7 +467,7 @@ export default function Clients() {
                     type="text" 
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   />
                 </div>
                 <div className="space-y-2">
@@ -463,7 +477,7 @@ export default function Clients() {
                     type="email" 
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
@@ -473,7 +487,7 @@ export default function Clients() {
                     type="text" 
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   />
                 </div>
                 <div className="space-y-2">
@@ -481,7 +495,7 @@ export default function Clients() {
                   <select 
                     value={formData.zone}
                     onChange={(e) => setFormData({ ...formData, zone: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                    className="kraken-input"
                   >
                     <option value={1}>Zona 1</option>
                     <option value={2}>Zona 2</option>
@@ -495,7 +509,7 @@ export default function Clients() {
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-medium dark:text-white"
+                    className="kraken-input h-auto py-3 font-medium"
                   />
                 </div>
               </div>
@@ -504,13 +518,13 @@ export default function Clients() {
                 <button 
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-6 py-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all dark:text-white"
+                  className="kraken-btn-secondary flex-1"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                  className="kraken-btn flex-1"
                 >
                   <Save size={20} />
                   <span>{editingClient ? 'Guardar Cambios' : 'Crear Cliente'}</span>
@@ -581,7 +595,7 @@ export default function Clients() {
                   <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-widest">Historial de Presupuestos</h3>
                   <button 
                     onClick={() => navigate(`/presupuestos/nuevo?cliente=${encodeURIComponent(selectedClient.name)}`)}
-                    className="text-xs font-bold text-kraken-orange hover:underline"
+                    className="text-xs font-bold text-[#FF4D00] hover:underline"
                   >
                     + Nuevo Presupuesto
                   </button>
@@ -592,10 +606,10 @@ export default function Clients() {
                     {clientBudgets.map((budget) => (
                       <div 
                         key={budget.id}
-                        className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl hover:border-kraken-orange/30 transition-all group"
+                        className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl hover:border-[#FF4D00]/30 transition-all group"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-kraken-orange transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-[#FF4D00] transition-colors">
                             <FileText size={20} />
                           </div>
                           <div>
@@ -612,14 +626,14 @@ export default function Clients() {
                           </div>
                           <button 
                             onClick={() => navigate(`/presupuestos?id=${budget.id}`)}
-                            className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                            className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                             title="Ver Presupuesto"
                           >
                             <Eye size={18} />
                           </button>
                           <button 
                             onClick={() => setBudgetDeleteConfirmation(budget.id)}
-                            className="p-2 text-neutral-400 hover:text-kraken-orange transition-colors"
+                            className="p-2 text-neutral-400 hover:text-[#FF4D00] transition-colors"
                             title="Eliminar Presupuesto"
                           >
                             <Trash2 size={18} />
@@ -640,7 +654,7 @@ export default function Clients() {
             <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 flex flex-col md:flex-row gap-4 shrink-0">
               <button 
                 onClick={() => navigate(`/presupuestos/nuevo?cliente=${encodeURIComponent(selectedClient.name)}`)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                className="kraken-btn flex-1"
               >
                 <Plus size={18} />
                 <span>Nuevo Presupuesto</span>
@@ -666,7 +680,7 @@ export default function Clients() {
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in fade-in zoom-in duration-200 border border-neutral-100 dark:border-neutral-800">
-            <div className="w-16 h-16 bg-kraken-orange/10 text-kraken-orange rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-[#FF4D00]/10 text-[#FF4D00] rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle size={32} />
             </div>
             <h3 className="text-xl font-bold text-center mb-2 dark:text-white">¿Eliminar Cliente?</h3>
@@ -676,13 +690,13 @@ export default function Clients() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setDeleteConfirmation(null)}
-                className="flex-1 px-6 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                className="kraken-btn-secondary flex-1"
               >
                 Cancelar
               </button>
               <button 
                 onClick={() => handleDelete(deleteConfirmation)}
-                className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                className="kraken-btn flex-1"
               >
                 Eliminar
               </button>
@@ -694,7 +708,7 @@ export default function Clients() {
       {budgetDeleteConfirmation && (
         <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in fade-in zoom-in duration-200 border border-neutral-100 dark:border-neutral-800">
-            <div className="w-16 h-16 bg-kraken-orange/10 text-kraken-orange rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-[#FF4D00]/10 text-[#FF4D00] rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle size={32} />
             </div>
             <h3 className="text-xl font-bold text-center mb-2 dark:text-white">¿Eliminar Presupuesto?</h3>
@@ -704,13 +718,13 @@ export default function Clients() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setBudgetDeleteConfirmation(null)}
-                className="flex-1 px-6 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                className="kraken-btn-secondary flex-1"
               >
                 Cancelar
               </button>
               <button 
                 onClick={() => handleDeleteBudget(budgetDeleteConfirmation)}
-                className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                className="kraken-btn flex-1"
               >
                 Eliminar
               </button>
