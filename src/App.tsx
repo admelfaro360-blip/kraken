@@ -12,6 +12,8 @@ import Reports from './pages/Reports';
 import Agenda from './pages/Agenda';
 import Config from './pages/Config';
 import Login from './pages/Login';
+import MaintenanceList from './pages/MaintenanceList';
+import NewMaintenance from './pages/NewMaintenance';
 import { ThemeProvider } from './lib/ThemeContext';
 import { Toaster } from 'sonner';
 import { auth } from './lib/firebase';
@@ -63,10 +65,12 @@ export default function App() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("AuthContext Estado cambiado:", firebaseUser?.uid);
       if (firebaseUser) {
         // Fetch additional user data from Firestore (like role)
         try {
           const userData = await getUserById(firebaseUser.uid);
+          console.log("Datos de usuario obtenidos de Firestore:", userData);
           let finalUser = { 
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -128,7 +132,7 @@ export default function App() {
               path="/" 
               element={
                 user ? (
-                  <Layout onLogout={handleLogout} />
+                  <Layout onLogout={handleLogout} user={user} />
                 ) : (
                   <Navigate to="/login" />
                 )
@@ -144,6 +148,8 @@ export default function App() {
               <Route path="gastos" element={<Expenses />} />
               <Route path="reportes" element={<Reports />} />
               <Route path="config" element={<Config />} />
+              <Route path="mantenimiento" element={<MaintenanceList />} />
+              <Route path="mantenimiento/nuevo" element={<NewMaintenance />} />
             </Route>
           </Routes>
         </BrowserRouter>
