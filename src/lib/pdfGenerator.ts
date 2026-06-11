@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CalculationResult, Phase, Material, Budget, WorkOrder } from '../types';
+import { CalculationResult, Phase, Material, Budget, WorkOrder, MaintenanceRecord } from '../types';
 import { translateText, translateMaterials } from './gemini';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -701,6 +701,283 @@ export const generateWeeklyAgendaPDF = async (data: WeeklyAgendaPDFData, formatT
   doc.setFontSize(isMobile ? 8 : 10);
   doc.setFont('helvetica', 'bolditalic');
   doc.text('Somos confianza, somos kraken', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+  return doc;
+};
+
+export const generateMaintenancePDF = async (record: MaintenanceRecord, overrideLang?: 'es' | 'pt' | 'en'): Promise<jsPDF> => {
+  const targetLang = overrideLang || record.language || 'es';
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width || 210;
+  const pageHeight = doc.internal.pageSize.height || 297;
+  const margin = 15;
+
+  const mt = {
+    es: {
+      title: 'FICHA DE MANTENIMIENTO PREVENTIVO',
+      sectionTitle: 'DATOS DEL MANTENIMIENTO',
+      clientLabel: 'Cliente',
+      addressLabel: 'Dirección',
+      phoneLabel: 'Teléfono',
+      emailLabel: 'Email',
+      dateLabel: 'Fecha Revisión',
+      nextDateLabel: 'Próxima Revisión',
+      statusLabel: 'Estado Ficha',
+      employeeLabel: 'Empleado Asignado',
+      tableHeaders: ['Categoría', 'Tarea', 'Estado', 'Observaciones de Tarea'],
+      obsTitle: 'OBSERVACIONES GENERALES',
+      techSignature: 'Firma del Técnico',
+      clientSignature: 'Firma del Cliente',
+      termsTitle: 'CONDICIONES DEL SERVICIO:',
+      termsText: [
+        'Los materiales podrán ser suministrados por Kraken Handyman para facilitar la ejecución de los trabajos. No obstante, Kraken Handyman no será responsable por defectos de fabricación, calidad, durabilidad o fallas propias de los materiales utilizados.',
+        'Forma de pago: 50% al confirmar el presupuesto y reservar agenda. El 50% restante deberá abonarse al finalizar los trabajos.',
+        'Los trabajos o modificaciones no incluidos expresamente en este presupuesto serán considerados adicionales y se presupuestarán por separado.',
+        'Este presupuesto tiene una validez de 15 días desde su fecha de emisión.',
+        'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.'
+      ],
+      emptyObs: 'Sin observaciones adicionales registradas.'
+    },
+    pt: {
+      title: 'FICHA DE MANUTENÇÃO PREVENTIVA',
+      sectionTitle: 'DADOS DA MANUTENÇÃO',
+      clientLabel: 'Cliente',
+      addressLabel: 'Morada',
+      phoneLabel: 'Telemóvel',
+      emailLabel: 'E-mail',
+      dateLabel: 'Data de Revisão',
+      nextDateLabel: 'Próxima Revisão',
+      statusLabel: 'Estado Ficha',
+      employeeLabel: 'Funcionário Atribuído',
+      tableHeaders: ['Categoria', 'Tarefa', 'Estado', 'Observações de Tarefa'],
+      obsTitle: 'OBSERVAÇÕES GERAIS',
+      techSignature: 'Assinatura do Técnico',
+      clientSignature: 'Assinatura do Cliente',
+      termsTitle: 'CONDIÇÕES DO SERVIÇO:',
+      termsText: [
+        'Os materiais podem ser fornecidos pela Kraken Handyman para facilitar a execução dos trabalhos. No entanto, a Kraken Handyman não será responsável por defeitos de fabrico, qualidade, durabilidade ou falhas próprias dos materiais utilizados.',
+        'Forma de pagamento: 50% na confirmação do orçamento e reserva de agenda. Os restantes 50% devem ser pagos no final dos trabalhos.',
+        'Os trabalhos ou modificações não incluídos expressamente neste orçamento serão considerados adicionais e serão orçamentados em separado.',
+        'Este orçamento é válido por 15 dias a contar da data de emissão.',
+        'A aceitação deste orçamento implica a conformidade do cliente com estas condições.'
+      ],
+      emptyObs: 'Sem observações adicionais registadas.'
+    },
+    en: {
+      title: 'PREVENTIVE MAINTENANCE SHEET',
+      sectionTitle: 'MAINTENANCE DETAILS',
+      clientLabel: 'Client',
+      addressLabel: 'Address',
+      phoneLabel: 'Phone',
+      emailLabel: 'Email',
+      dateLabel: 'Revision Date',
+      nextDateLabel: 'Next Revision',
+      statusLabel: 'Sheet Status',
+      employeeLabel: 'Assigned Employee',
+      tableHeaders: ['Category', 'Task', 'Status', 'Task Observations'],
+      obsTitle: 'GENERAL OBSERVATIONS',
+      techSignature: 'Technician Signature',
+      clientSignature: 'Client Signature',
+      termsTitle: 'TERMS OF SERVICE:',
+      termsText: [
+        'Materials may be supplied by Kraken Handyman to facilitate the execution of the works. However, Kraken Handyman shall not be liable for manufacturing defects, quality, durability, or failures inherent to the materials used.',
+        'Payment process: 50% upon confirmation of the budget and booking the schedule. The remaining 50% must be paid upon completion of the works.',
+        'Any works or modifications not expressly included in this budget will be considered additional and will be quoted separately.',
+        'This budget is valid for 15 days from its date of issue.',
+        'The acceptance of this budget implies the customer\'s agreement with these terms.'
+      ],
+      emptyObs: 'No additional observations recorded.'
+    }
+  }[targetLang];
+
+  // Dynamic translators using Gemini API (if language is not Spanish)
+  let displayObservations = record.generalObservations || '';
+  let displayChecklist = [...record.checklist];
+
+  if (targetLang !== 'es') {
+    try {
+      if (displayObservations) {
+        displayObservations = await translateText(displayObservations, targetLang);
+      }
+      displayChecklist = await Promise.all(record.checklist.map(async (item) => {
+        let cat = item.category || '';
+        let tsk = item.task || '';
+        let nts = item.notes || '';
+        try {
+          if (cat && cat !== 'Personalizado') cat = await translateText(cat, targetLang);
+          if (cat === 'Personalizado') cat = targetLang === 'en' ? 'Custom' : targetLang === 'pt' ? 'Personalizado' : 'Personalizado';
+          if (tsk) tsk = await translateText(tsk, targetLang);
+          if (nts) nts = await translateText(nts, targetLang);
+        } catch {
+          // ignore error
+        }
+        return { ...item, category: cat, task: tsk, notes: nts };
+      }));
+    } catch (e) {
+      console.warn("Translation failed for maintenance checklist", e);
+    }
+  }
+
+  // 1. Encabezado (Fondo Negro + Logo Centrado como el presupuesto)
+  const headerHeight = 35;
+  doc.setFillColor(10, 10, 10);
+  doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+  try {
+    const logoUrl = "/logo.png";
+    const logoWidth = 65;
+    const logoHeight = 26;
+    doc.addImage(logoUrl, 'PNG', (pageWidth - logoWidth) / 2, (headerHeight - logoHeight) / 2, logoWidth, logoHeight);
+  } catch (e) {
+    console.warn("Could not add logo to PDF", e);
+  }
+
+  // Título Centrado
+  doc.setTextColor(18, 18, 18);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(mt.title, pageWidth / 2, headerHeight + 12, { align: 'center' });
+
+  // Divider Line
+  doc.setDrawColor(209, 4, 41);
+  doc.setLineWidth(1);
+  doc.line(margin, headerHeight + 17, pageWidth - margin, headerHeight + 17);
+
+  // Client and Metadata Grid
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(100, 100, 100);
+  doc.text(mt.sectionTitle, margin, headerHeight + 25);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(18, 18, 18);
+
+  const leftX = margin;
+  const rightX = pageWidth / 2 + 10;
+  let currentY = headerHeight + 31;
+
+  // Left column: Client details
+  doc.text(`${mt.clientLabel}: ${record.clientData?.name || 'N/A'}`, leftX, currentY);
+  doc.text(`${mt.addressLabel}: ${record.clientData?.address || 'N/A'}`, leftX, currentY + 6);
+  doc.text(`${mt.phoneLabel}: ${record.clientData?.phone || 'N/A'}`, leftX, currentY + 12);
+  doc.text(`${mt.emailLabel}: ${record.clientData?.email || 'N/A'}`, leftX, currentY + 18);
+
+  // Right column: Date and tech details
+  doc.text(`${mt.dateLabel}: ${record.date || 'N/A'}`, rightX, currentY);
+  doc.text(`${mt.nextDateLabel}: ${record.nextRevisionDate || 'N/A'}`, rightX, currentY + 6);
+  doc.text(`${mt.statusLabel}: ${record.status || 'N/A'}`, rightX, currentY + 12);
+  if (record.assignedEmployee) {
+    doc.text(`${mt.employeeLabel}: ${record.assignedEmployee}`, rightX, currentY + 18);
+  }
+
+  currentY += 28;
+
+  // 2. Table of Checklist Items
+  const tableData = displayChecklist.map((item) => [
+    item.category || '',
+    item.task || '',
+    item.status || '',
+    item.notes || ''
+  ]);
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [mt.tableHeaders],
+    body: tableData,
+    margin: { left: margin, right: margin },
+    styles: {
+      fontSize: 8.5,
+      cellPadding: 3,
+      font: 'helvetica',
+    },
+    headStyles: {
+      fillColor: [240, 240, 240],
+      textColor: [50, 50, 50],
+      fontStyle: 'bold',
+      lineColor: [220, 220, 220],
+      lineWidth: 0.1
+    },
+    bodyStyles: {
+      textColor: [60, 60, 60],
+      lineColor: [230, 230, 230],
+      lineWidth: 0.1
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 45 },
+      1: { cellWidth: 70 },
+      2: { fontStyle: 'bold', textColor: [255, 100, 0], cellWidth: 25, halign: 'center' },
+      3: { cellWidth: 40 }
+    },
+    theme: 'plain'
+  });
+
+  // Calculate position after table
+  let finalY = (doc as any).lastAutoTable.finalY + 12;
+
+  // Ensure observations and details fit on page, otherwise add a new page
+  if (finalY > (pageHeight - 65)) {
+    doc.addPage();
+    finalY = margin + 15;
+  }
+
+  // General observations
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(mt.obsTitle, margin, finalY);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(50, 50, 50);
+  const obsText = displayObservations || mt.emptyObs;
+  const obsLines = doc.splitTextToSize(obsText, pageWidth - (margin * 2));
+  doc.text(obsLines, margin, finalY + 6);
+
+  finalY += 12 + (obsLines.length * 4.5);
+
+  // Signatures block
+  if (finalY > (pageHeight - 75)) {
+    doc.addPage();
+    finalY = margin + 15;
+  }
+
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.5);
+
+  // Signature line 1
+  doc.line(margin + 5, finalY + 12, margin + 65, finalY + 12);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(100, 100, 100);
+  doc.text(mt.techSignature, margin + 20, finalY + 17);
+
+  // Signature line 2
+  doc.line(pageWidth - margin - 65, finalY + 12, pageWidth - margin - 5, finalY + 12);
+  doc.text(mt.clientSignature, pageWidth - margin - 50, finalY + 17);
+
+  // Legal text / service conditions at the bottom of the last page
+  doc.setDrawColor(240, 240, 240);
+  doc.setLineWidth(1);
+  doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text(mt.termsTitle, margin, pageHeight - 44);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(110, 110, 110);
+  
+  let textY = pageHeight - 39;
+  mt.termsText.forEach((paragraph) => {
+    const splitParagraph = doc.splitTextToSize(paragraph, pageWidth - (margin * 2));
+    splitParagraph.forEach((line: string) => {
+      doc.text(line, margin, textY);
+      textY += 3.5;
+    });
+    textY += 1;
+  });
 
   return doc;
 };
