@@ -51,7 +51,15 @@ const translations = {
     totalMaterials: 'Total materiales:',
     totalGeneral: 'PRECIO TOTAL:',
     ivaLabel: 'I.V.A',
-    footer: 'Somos confianza, somos kraken'
+    footer: 'Somos confianza, somos kraken',
+    termsTitle: 'CONDICIONES DEL SERVICIO',
+    termsText: [
+      'Los materiales podrán ser suministrados por Kraken Handyman para facilitar la ejecución de los trabajos. No obstante, Kraken Handyman no será responsable por defectos de fabricación, calidad, durabilidad o fallas propias de los materiales utilizados.',
+      'Forma de pago: 50% al confirmar el presupuesto y reservar agenda. El 50% restante deberá abonarse al finalizar los trabajos.',
+      'Los trabajos o modificaciones no incluidos expresamente en este presupuesto serán considerados adicionales y se presupuestarán por separado.',
+      'Este presupuesto tiene una validez de 15 días desde su fecha de emisión.',
+      'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.'
+    ]
   },
   pt: {
     title: 'Orçamento de Manutenção',
@@ -68,7 +76,15 @@ const translations = {
     totalMaterials: 'Total materiais:',
     totalGeneral: 'PREÇO TOTAL:',
     ivaLabel: 'I.V.A',
-    footer: 'Somos confiança, somos kraken'
+    footer: 'Somos confiança, somos kraken',
+    termsTitle: 'CONDIÇÕES DO SERVIÇO',
+    termsText: [
+      'Os materiais podem ser fornecidos pela Kraken Handyman para facilitar a execução dos trabalhos. No entanto, a Kraken Handyman não será responsável por defeitos de fabrico, qualidade, durabilidade ou falhas próprias dos materiais utilizados.',
+      'Forma de pagamento: 50% na confirmação do orçamento e reserva de agenda. Os 50% restantes devem ser pagos no final dos trabalhos.',
+      'Os trabalhos ou modificações não incluídos expressamente neste orçamento serão considerados adicionais e serão orçamentados em separado.',
+      'Este orçamento é válido por 15 dias a contar da data de emissão.',
+      'A aceitação deste orçamento implica a conformidade do cliente com estas condições.'
+    ]
   },
   en: {
     title: 'Maintenance Budget',
@@ -85,7 +101,15 @@ const translations = {
     totalMaterials: 'Total materials:',
     totalGeneral: 'TOTAL PRICE:',
     ivaLabel: 'V.A.T',
-    footer: 'We are trust, we are kraken'
+    footer: 'We are trust, we are kraken',
+    termsTitle: 'TERMS OF SERVICE',
+    termsText: [
+      'Materials may be supplied by Kraken Handyman to facilitate the execution of the works. However, Kraken Handyman shall not be liable for manufacturing defects, quality, durability, or failures inherent to the materials used.',
+      'Payment process: 50% upon confirmation of the budget and booking the schedule. The remaining 50% must be paid upon completion of the works.',
+      'Any works or modifications not expressly included in this budget will be considered additional and will be quoted separately.',
+      'This budget is valid for 15 days from its date of issue.',
+      'The acceptance of this budget implies the customer\'s agreement with these terms.'
+    ]
   }
 };
 
@@ -470,18 +494,41 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € ${showIVA ? `+ ${t.ivaLabel}` : ''}`, pageWidth - margin, currentY, { align: 'right' });
 
   // 7. Información de Pago
-  checkPageBreak(30);
+  checkPageBreak(25);
   currentY += 15;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(50, 50, 50);
-  doc.text("Forma de Pago: (50% al inicio de obra)", margin, currentY);
-  currentY += 5;
   doc.text("iban: DE95100110012356675960 (Eduardo Federico Martínez)", margin, currentY);
   currentY += 5;
   doc.text("mbway: +351 967 873 913", margin, currentY);
 
-  // 8. Pie de Página
+  // 8. Condiciones del Servicio (Letra chica / Términos legales)
+  currentY += 8; // Margen superior para separarlo visualmente de los datos bancarios
+  checkPageBreak(12);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(isMobile ? 8 : 9);
+  doc.setTextColor(50, 50, 50);
+  doc.text(t.termsTitle, margin, currentY);
+  currentY += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(isMobile ? 7 : 7.5); // Color tenue "letra chica" y tamaño pequeño
+  doc.setTextColor(110, 110, 110);
+
+  const spacingY = isMobile ? 3.5 : 4;
+  t.termsText.forEach((paragraph: string) => {
+    const splitParagraph = doc.splitTextToSize(paragraph, pageWidth - (margin * 2));
+    splitParagraph.forEach((line: string) => {
+      checkPageBreak(spacingY + 2);
+      doc.text(line, margin, currentY);
+      currentY += spacingY;
+    });
+    currentY += 1.5; // Sutil separación entre párrafos
+  });
+
+  // 9. Pie de Página
   drawFooter();
 
   return doc;
