@@ -37,6 +37,7 @@ export interface User {
   email: string;
   role: 'admin' | 'user';
   password?: string;
+  allowedModules?: string[];
 }
 
 export interface Client {
@@ -50,6 +51,34 @@ export interface Client {
   zone: number;
   notes?: string;
   createdAt?: string;
+  clientType?: 'Industrial' | 'Particular' | 'Mantenimiento';
+}
+
+export interface MaintenanceItem {
+  id: string;
+  category: string;
+  task: string;
+  status: 'Ok' | 'Reparar' | 'N/A' | '';
+  notes: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  clientId: string;
+  clientData: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+  date: string;
+  nextRevisionDate: string;
+  checklist: MaintenanceItem[];
+  generalObservations: string;
+  status: 'Programado' | 'Completado';
+  createdAt: string;
+  language?: 'es' | 'pt' | 'en';
+  assignedEmployee?: string;
 }
 
 export interface LaborAssignment {
