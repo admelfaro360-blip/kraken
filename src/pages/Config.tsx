@@ -25,7 +25,7 @@ import { BusinessConfig, User, CostItem, ZoneItem } from '../types';
 import { cn } from '../lib/utils';
 
 const ConfigSection = ({ title, icon: Icon, children }: any) => (
-  <div className="bg-white dark:bg-neutral-900 p-8 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800 transition-colors">
+  <div className="kraken-card p-8">
     <div className="flex items-center gap-4 mb-8">
       <div className="p-3 rounded-2xl bg-neutral-900 dark:bg-kraken-orange text-white">
         <Icon size={24} />
@@ -59,7 +59,7 @@ const InputField = ({ label, value, unit, type = 'number', onChange, onRemove }:
         type={type} 
         value={value}
         onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
-        className="w-full pl-4 pr-12 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+        className="kraken-input pr-12"
       />
       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-neutral-400 dark:text-neutral-500">{unit}</span>
     </div>
@@ -412,7 +412,7 @@ export default function Config() {
           <button 
             onClick={handleExportData}
             disabled={saving}
-            className="flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 rounded-xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-lg disabled:opacity-50"
+            className="kraken-btn-secondary"
           >
             {saving ? <Loader2 className="animate-spin" size={20} /> : <FileSpreadsheet size={20} className="text-green-600" />}
             <span>Exportar Base (.xlsx)</span>
@@ -420,7 +420,7 @@ export default function Config() {
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center justify-center gap-2 px-8 py-4 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20 disabled:opacity-50"
+            className="kraken-btn"
           >
             {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
             <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
@@ -433,24 +433,24 @@ export default function Config() {
           {config.fixedCosts.map((cost) => (
             <div key={cost.id} className="space-y-4 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
               <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Descripción</label>
-                  <input 
-                    type="text"
-                    value={cost.name}
-                    onChange={(e) => updateItem('fixedCosts', cost.id, 'name', e.target.value)}
-                    className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                  />
-                </div>
-                <div className="w-32 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Monto (€)</label>
-                  <div className="relative">
-                    <input 
-                      type="number"
-                      value={cost.amount}
-                      onChange={(e) => updateItem('fixedCosts', cost.id, 'amount', Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                    />
+          <div className="flex-1 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Descripción</label>
+            <input 
+              type="text"
+              value={cost.name}
+              onChange={(e) => updateItem('fixedCosts', cost.id, 'name', e.target.value)}
+              className="kraken-input h-10 px-3 text-sm"
+            />
+          </div>
+          <div className="w-32 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Monto (€)</label>
+            <div className="relative">
+              <input 
+                type="number"
+                value={cost.amount}
+                onChange={(e) => updateItem('fixedCosts', cost.id, 'amount', Number(e.target.value))}
+                className="kraken-input h-10 px-3 text-sm"
+              />
                     <button 
                       onClick={() => removeItem('fixedCosts', cost.id)}
                       className="absolute -right-2 -top-2 bg-kraken-orange text-white p-1 rounded-full hover:bg-kraken-orange-hover transition-colors shadow-sm"
@@ -464,7 +464,7 @@ export default function Config() {
           ))}
           <button 
             onClick={() => addItem('fixedCosts')}
-            className="col-span-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-neutral-400 hover:text-kraken-orange hover:border-kraken-orange/50 transition-all font-bold"
+            className="kraken-btn-secondary col-span-full py-4"
           >
             <Plus size={20} />
             <span>Añadir Gasto Fijo</span>
@@ -478,24 +478,24 @@ export default function Config() {
           {config.variableCosts.map((cost) => (
             <div key={cost.id} className="space-y-4 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
               <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Gasto Variable</label>
-                  <input 
-                    type="text"
-                    value={cost.name}
-                    onChange={(e) => updateItem('variableCosts', cost.id, 'name', e.target.value)}
-                    className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                  />
-                </div>
-                <div className="w-32 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Monto (€)</label>
-                  <div className="relative">
-                    <input 
-                      type="number"
-                      value={cost.amount}
-                      onChange={(e) => updateItem('variableCosts', cost.id, 'amount', Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                    />
+          <div className="flex-1 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Gasto Variable</label>
+            <input 
+              type="text"
+              value={cost.name}
+              onChange={(e) => updateItem('variableCosts', cost.id, 'name', e.target.value)}
+              className="kraken-input h-10 px-3 text-sm"
+            />
+          </div>
+          <div className="w-32 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Monto (€)</label>
+            <div className="relative">
+              <input 
+                type="number"
+                value={cost.amount}
+                onChange={(e) => updateItem('variableCosts', cost.id, 'amount', Number(e.target.value))}
+                className="kraken-input h-10 px-3 text-sm"
+              />
                     <button 
                       onClick={() => removeItem('variableCosts', cost.id)}
                       className="absolute -right-2 -top-2 bg-kraken-orange text-white p-1 rounded-full hover:bg-kraken-orange-hover transition-colors shadow-sm"
@@ -509,7 +509,7 @@ export default function Config() {
           ))}
           <button 
             onClick={() => addItem('variableCosts')}
-            className="col-span-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-neutral-400 hover:text-kraken-orange hover:border-kraken-orange/50 transition-all font-bold"
+            className="kraken-btn-secondary col-span-full py-4"
           >
             <Plus size={20} />
             <span>Añadir Gasto Variable</span>
@@ -523,24 +523,24 @@ export default function Config() {
           {config.transportZones.map((zone) => (
             <div key={zone.id} className="space-y-4 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
               <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Nombre Zona</label>
-                  <input 
-                    type="text"
-                    value={zone.name}
-                    onChange={(e) => updateItem('transportZones', zone.id, 'name', e.target.value)}
-                    className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                  />
-                </div>
-                <div className="w-32 space-y-2">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Costo (€)</label>
-                  <div className="relative">
-                    <input 
-                      type="number"
-                      value={zone.amount}
-                      onChange={(e) => updateItem('transportZones', zone.id, 'amount', Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl outline-none font-bold dark:text-white"
-                    />
+          <div className="flex-1 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Nombre Zona</label>
+            <input 
+              type="text"
+              value={zone.name}
+              onChange={(e) => updateItem('transportZones', zone.id, 'name', e.target.value)}
+              className="kraken-input h-10 px-3 text-sm"
+            />
+          </div>
+          <div className="w-32 space-y-2">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Costo (€)</label>
+            <div className="relative">
+              <input 
+                type="number"
+                value={zone.amount}
+                onChange={(e) => updateItem('transportZones', zone.id, 'amount', Number(e.target.value))}
+                className="kraken-input h-10 px-3 text-sm"
+              />
                     <button 
                       onClick={() => removeItem('transportZones', zone.id)}
                       className="absolute -right-2 -top-2 bg-kraken-orange text-white p-1 rounded-full hover:bg-kraken-orange-hover transition-colors shadow-sm"
@@ -554,7 +554,7 @@ export default function Config() {
           ))}
           <button 
             onClick={() => addItem('transportZones')}
-            className="col-span-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-neutral-400 hover:text-kraken-orange hover:border-kraken-orange/50 transition-all font-bold"
+            className="kraken-btn-secondary col-span-full py-4"
           >
             <Plus size={20} />
             <span>Añadir Zona</span>
@@ -605,10 +605,10 @@ export default function Config() {
               ))}
               <button 
                 onClick={() => {
-                  setEditingUser({ username: '', email: '', role: 'user', password: '' });
+                  setEditingUser({ username: '', email: '', role: 'user', password: '', allowedModules: [] });
                   setIsUserModalOpen(true);
                 }}
-                className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-neutral-400 hover:text-kraken-orange hover:border-kraken-orange/50 transition-all font-bold"
+                className="kraken-btn-secondary p-6 flex flex-col items-center justify-center gap-2"
               >
                 <UserPlus size={32} />
                 <span>Añadir Usuario</span>
@@ -620,7 +620,7 @@ export default function Config() {
         <ConfigSection title="Parámetros del Sistema" icon={Settings}>
           <div className="space-y-2">
             <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Idioma por Defecto</label>
-            <select className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white">
+            <select className="kraken-input">
               <option value="es">Español</option>
               <option value="pt">Portugués</option>
               <option value="en">Inglés</option>
@@ -654,7 +654,7 @@ export default function Config() {
                         type="text" 
                         value={editingUser.username}
                         onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                        className="kraken-input pl-12"
                       />
                   </div>
                 </div>
@@ -668,7 +668,7 @@ export default function Config() {
                       type="email" 
                       value={editingUser.email}
                       onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input pl-12"
                     />
                   </div>
                 </div>
@@ -683,7 +683,7 @@ export default function Config() {
                       value={editingUser.password}
                       onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
                       placeholder={editingUser.id ? "Dejar en blanco para no cambiar" : ""}
-                      className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input pl-12"
                     />
                   </div>
                 </div>
@@ -695,11 +695,43 @@ export default function Config() {
                     <select 
                       value={editingUser.role}
                       onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'admin' | 'user' })}
-                      className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-kraken-orange/20 focus:border-kraken-orange outline-none transition-all font-bold dark:text-white"
+                      className="kraken-input pl-12"
                     >
                       <option value="user">Usuario Común</option>
                       <option value="admin">Administrador</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block">Módulos Permitidos</label>
+                  <div className="grid grid-cols-2 gap-3 bg-neutral-50 dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                    {[
+                      { id: 'clients', label: 'Clientes' },
+                      { id: 'budgets', label: 'Presupuestos' },
+                      { id: 'workOrders', label: 'Órdenes' },
+                      { id: 'expenses', label: 'Gastos' },
+                      { id: 'maintenance', label: 'Mantenimiento' },
+                    ].map((mod) => {
+                      const isChecked = (editingUser.allowedModules || []).includes(mod.id);
+                      return (
+                        <label key={mod.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium dark:text-neutral-300">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              const current = editingUser.allowedModules || [];
+                              const next = current.includes(mod.id)
+                                ? current.filter(m => m !== mod.id)
+                                : [...current, mod.id];
+                              setEditingUser({ ...editingUser, allowedModules: next });
+                            }}
+                            className="rounded border-neutral-300 dark:border-neutral-700 text-kraken-orange focus:ring-kraken-orange h-4 w-4"
+                          />
+                          <span>{mod.label}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -708,13 +740,13 @@ export default function Config() {
                 <button 
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
-                  className="flex-1 px-6 py-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all dark:text-white"
+                  className="kraken-btn-secondary flex-1"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-kraken-orange text-white rounded-2xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                  className="kraken-btn flex-1"
                 >
                   <Save size={20} />
                   <span>Guardar</span>
@@ -739,13 +771,13 @@ export default function Config() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setUserToDelete(null)}
-                className="flex-1 px-6 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                className="kraken-btn-secondary flex-1"
               >
                 Cancelar
               </button>
               <button 
                 onClick={() => handleDeleteUser(userToDelete)}
-                className="flex-1 px-6 py-3 bg-kraken-orange text-white rounded-xl font-bold hover:bg-kraken-orange-hover transition-all shadow-lg shadow-kraken-orange/20"
+                className="kraken-btn flex-1"
               >
                 Eliminar
               </button>
