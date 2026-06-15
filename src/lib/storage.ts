@@ -1,5 +1,6 @@
 import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord } from '../types';
-import { db, auth } from './firebase';
+import { db, auth, storage } from './firebase';
+import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   collection, 
   getDocs, 
@@ -386,6 +387,34 @@ export const deleteMaintenance = async (id: string) => {
     await deleteDoc(doc(db, MAINTENANCE_COLLECTION, id));
   } catch (e) {
     handleFirestoreError(e, OperationType.DELETE, MAINTENANCE_COLLECTION);
+  }
+};
+
+export const uploadMaintenancePhotos = async (files: File[], maintenanceId: string): Promise<string[]> => {
+  try {
+    const urls: string[] = [];
+    for (const file of files) {
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const uniqueName = `${timestamp}_${randomString}_${file.name}`;
+      const fileRef = sRef(storage, `maintenance/${maintenanceId}/${uniqueName}`);
+      
+      const snapshot = await uploadBytes(fileRef, file);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      urls.push(downloadUrl);
+    }
+    return urls;
+  } catch (e) {
+    console.warn("Storage failed or not configured, using base64 fallback:", e);
+    const base64Promises = files.map(file => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    });
+    return Promise.all(base64Promises);
   }
 };
 
