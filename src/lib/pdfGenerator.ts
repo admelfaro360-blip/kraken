@@ -58,7 +58,7 @@ const translations = {
       'Forma de pago: 50% al confirmar el presupuesto y reservar agenda. El 50% restante deberá abonarse al finalizar los trabajos.',
       'Los trabajos o modificaciones no incluidos expresamente en este presupuesto serán considerados adicionales y se presupuestarán por separado.',
       'Este presupuesto tiene una validez de 15 días desde su fecha de emisión.',
-      'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.'
+      'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.\nEl personal de Kraken tiene Seguro de accidente y responsabilidad civil.'
     ]
   },
   pt: {
@@ -83,7 +83,7 @@ const translations = {
       'Forma de pagamento: 50% na confirmação do orçamento e reserva de agenda. Os 50% restantes devem ser pagos no final dos trabalhos.',
       'Os trabalhos ou modificações não incluídos expressamente neste orçamento serão considerados adicionais e serão orçamentados em separado.',
       'Este orçamento é válido por 15 dias a contar da data de emissão.',
-      'A aceitação deste orçamento implica a conformidade do cliente com estas condições.'
+      'A aceitação deste orçamento implica a conformidade do cliente com estas condições.\nO pessoal da Kraken tem seguro de acidentes e responsabilidade civil.'
     ]
   },
   en: {
@@ -108,7 +108,7 @@ const translations = {
       'Payment process: 50% upon confirmation of the budget and booking the schedule. The remaining 50% must be paid upon completion of the works.',
       'Any works or modifications not expressly included in this budget will be considered additional and will be quoted separately.',
       'This budget is valid for 15 days from its date of issue.',
-      'The acceptance of this budget implies the customer\'s agreement with these terms.'
+      'The acceptance of this budget implies the customer\'s agreement with these terms.\nKraken personnel have accident and civil liability insurance.'
     ]
   }
 };
@@ -320,6 +320,30 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
     }
   }
 
+  // Calculemos el valor de los materiales de forma exacta para el subtotal
+  let calculatedMaterialsSubtotal = 0;
+  if (displayMaterials && displayMaterials.length > 0) {
+    displayMaterials.forEach((mat) => {
+      const markup = typeof (data as any).config?.materialMarkup === 'number'
+        ? (data as any).config.materialMarkup
+        : 0.25;
+      const unitPrice = mat.cost * (1 + markup);
+      calculatedMaterialsSubtotal += unitPrice * mat.quantity;
+    });
+  }
+
+  // Calculemos el valor de la Mano de Obra (subtotal sin materiales, o suma de minimo sin margen + margen)
+  let laborValue = 0;
+  if (data.calculation) {
+    const minWithMarginSum = (data.calculation.minWithoutMargin || 0) + (data.calculation.marginEur || 0);
+    if (minWithMarginSum > 0) {
+      laborValue = minWithMarginSum;
+    } else {
+      const totalSubtotal = data.calculation.subtotal || 0;
+      laborValue = Math.max(0, totalSubtotal - calculatedMaterialsSubtotal);
+    }
+  }
+
   // 1. Encabezado (Fondo Negro + Logo Centrado)
   const headerHeight = isMobile ? 25 : 35;
   doc.setFillColor(10, 10, 10);
@@ -434,6 +458,17 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
     currentY += 6;
   });
 
+  // Subtotal Mano de Obra
+  checkPageBreak(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(isMobile ? 9 : 10);
+  doc.setTextColor(0, 0, 0);
+  const subtotalLaborLabel = targetLang === 'pt' ? 'Subtotal Mão de Obra' : targetLang === 'en' ? 'Labor Subtotal' : 'Subtotal Mano de Obra';
+  doc.text(`${subtotalLaborLabel}: ${laborValue.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+  currentY += 6;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
+
   // Línea horizontal negra (Fina)
   checkPageBreak(10);
   currentY += 4;
@@ -460,7 +495,10 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
     displayMaterials.forEach((mat) => {
       checkPageBreak(6);
       const unit = (mat as any).unit || 'un.';
-      const unitPrice = mat.cost * (1 + (data as any).config?.materialMarkup || 0.25);
+      const markup = typeof (data as any).config?.materialMarkup === 'number'
+        ? (data as any).config.materialMarkup
+        : 0.25;
+      const unitPrice = mat.cost * (1 + markup);
       const totalMat = unitPrice * mat.quantity;
       
       doc.text(`• ${mat.name}`, margin + 5, currentY);
@@ -473,6 +511,17 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
     doc.text(`• ${t.noMaterials}`, margin + 5, currentY);
     currentY += 6;
   }
+
+  // Subtotal Materiales
+  checkPageBreak(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(isMobile ? 9 : 10);
+  doc.setTextColor(0, 0, 0);
+  const subtotalMatLabel = targetLang === 'pt' ? 'Subtotal Materiais' : targetLang === 'en' ? 'Materials Subtotal' : 'Subtotal Materiales';
+  doc.text(`${subtotalMatLabel}: ${calculatedMaterialsSubtotal.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+  currentY += 6;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
 
   // Línea horizontal negra (Fina)
   checkPageBreak(10);
@@ -514,10 +563,10 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   currentY += 5;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(isMobile ? 7 : 7.5); // Color tenue "letra chica" y tamaño pequeño
+  doc.setFontSize(isMobile ? 5.5 : 6); // Color tenue "letra chica" y tamaño pequeño
   doc.setTextColor(110, 110, 110);
 
-  const spacingY = isMobile ? 3.5 : 4;
+  const spacingY = isMobile ? 2.5 : 3;
   t.termsText.forEach((paragraph: string) => {
     const splitParagraph = doc.splitTextToSize(paragraph, pageWidth - (margin * 2));
     splitParagraph.forEach((line: string) => {
@@ -734,7 +783,7 @@ export const generateMaintenancePDF = async (record: MaintenanceRecord, override
         'Forma de pago: 50% al confirmar el presupuesto y reservar agenda. El 50% restante deberá abonarse al finalizar los trabajos.',
         'Los trabajos o modificaciones no incluidos expresamente en este presupuesto serán considerados adicionales y se presupuestarán por separado.',
         'Este presupuesto tiene una validez de 15 días desde su fecha de emisión.',
-        'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.'
+        'La aceptación del presente presupuesto implica la conformidad del cliente con estas condiciones.\nEl personal de Kraken tiene Seguro de accidente y responsabilidad civil.'
       ],
       emptyObs: 'Sin observaciones adicionales registradas.'
     },
@@ -759,7 +808,7 @@ export const generateMaintenancePDF = async (record: MaintenanceRecord, override
         'Forma de pagamento: 50% na confirmação do orçamento e reserva de agenda. Os restantes 50% devem ser pagos no final dos trabalhos.',
         'Os trabalhos ou modificações não incluídos expressamente neste orçamento serão considerados adicionais e serão orçamentados em separado.',
         'Este orçamento é válido por 15 dias a contar da data de emissão.',
-        'A aceitação deste orçamento implica a conformidade do cliente com estas condições.'
+        'A aceitação deste orçamento implica a conformidade do cliente com estas condições.\nO pessoal da Kraken tem seguro de acidentes e responsabilidade civil.'
       ],
       emptyObs: 'Sem observações adicionais registadas.'
     },
@@ -784,7 +833,7 @@ export const generateMaintenancePDF = async (record: MaintenanceRecord, override
         'Payment process: 50% upon confirmation of the budget and booking the schedule. The remaining 50% must be paid upon completion of the works.',
         'Any works or modifications not expressly included in this budget will be considered additional and will be quoted separately.',
         'This budget is valid for 15 days from its date of issue.',
-        'The acceptance of this budget implies the customer\'s agreement with these terms.'
+        'The acceptance of this budget implies the customer\'s agreement with these terms.\nKraken personnel have accident and civil liability insurance.'
       ],
       emptyObs: 'No additional observations recorded.'
     }
