@@ -363,15 +363,15 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   
   // N° y Fecha en una línea superior (más pequeña y gris)
   doc.setTextColor(100, 100, 100);
-  doc.setFontSize(isMobile ? 8 : 10);
+  doc.setFontSize(isMobile ? 7 : 10);
   doc.setFont('helvetica', 'normal');
   doc.text(`${t.budgetNo} ${data.id}`, margin, currentY);
   doc.text(`${t.date} ${data.date}`, pageWidth - margin, currentY, { align: 'right' });
   
   // Título Centrado
-  currentY += isMobile ? 8 : 10;
+  currentY += isMobile ? 6 : 10;
   doc.setTextColor(0, 0, 0);
-  doc.setFontSize(isMobile ? 14 : 18);
+  doc.setFontSize(isMobile ? 11 : 18);
   doc.setFont('helvetica', 'bold');
   doc.text(t.title, pageWidth / 2, currentY, { align: 'center' });
 
@@ -387,18 +387,18 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
   
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 8 : 12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text(t.clientData, margin + 4, currentY);
   
-  currentY += 7;
-  doc.setFontSize(isMobile ? 9 : 11);
+  currentY += isMobile ? 5 : 7;
+  doc.setFontSize(isMobile ? 7.5 : 11);
   doc.setFont('helvetica', 'normal');
   doc.text(`${t.clientName} ${data.client.name}`, margin, currentY);
-  currentY += 6;
+  currentY += isMobile ? 5 : 6;
   doc.text(`${t.clientPhone} ${data.client.phone}`, margin, currentY);
-  currentY += 6;
+  currentY += isMobile ? 5 : 6;
   doc.text(`${t.clientAddress} ${data.client.address}`, margin, currentY);
 
   // Línea horizontal negra (Fina)
@@ -414,7 +414,7 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
     doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
     
     doc.setTextColor(100, 100, 100);
-    doc.setFontSize(isMobile ? 8 : 9);
+    doc.setFontSize(isMobile ? 6 : 9);
     doc.setFont('helvetica', 'normal');
     
     // Izquierda: Instagram
@@ -444,28 +444,28 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
 
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 8 : 12);
   doc.setFont('helvetica', 'bold');
   doc.text(t.descriptionLabel, margin + 4, currentY);
   
-  currentY += 7;
-  doc.setFontSize(isMobile ? 9 : 10);
+  currentY += isMobile ? 5 : 7;
+  doc.setFontSize(isMobile ? 7.5 : 10);
   doc.setFont('helvetica', 'normal');
   const splitDesc = doc.splitTextToSize(displayDescription, pageWidth - (margin * 2));
   splitDesc.forEach((line: string) => {
-    checkPageBreak(6);
+    checkPageBreak(isMobile ? 4.5 : 6);
     doc.text(line, margin, currentY);
-    currentY += 6;
+    currentY += isMobile ? 4.5 : 6;
   });
 
   // Subtotal Mano de Obra
   checkPageBreak(8);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(isMobile ? 9 : 10);
+  doc.setFontSize(isMobile ? 7.5 : 10);
   doc.setTextColor(0, 0, 0);
   const subtotalLaborLabel = targetLang === 'pt' ? 'Subtotal Mão de Obra' : targetLang === 'en' ? 'Labor Subtotal' : 'Subtotal Mano de Obra';
   doc.text(`${subtotalLaborLabel}: ${laborValue.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
-  currentY += 6;
+  currentY += isMobile ? 4.5 : 6;
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'normal');
 
@@ -483,17 +483,17 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.setLineWidth(1.5);
   doc.line(margin, currentY - 4, margin, currentY + 1); // Vertical accent
 
-  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFontSize(isMobile ? 8 : 12);
   doc.setFont('helvetica', 'bold');
   doc.text(t.materialsLabel, margin + 4, currentY);
   
-  currentY += 7;
-  doc.setFontSize(isMobile ? 9 : 10);
+  currentY += isMobile ? 5 : 7;
+  doc.setFontSize(isMobile ? 7.5 : 10);
   doc.setFont('helvetica', 'normal');
   
   if (displayMaterials && displayMaterials.length > 0) {
     displayMaterials.forEach((mat) => {
-      checkPageBreak(6);
+      checkPageBreak(isMobile ? 6 : 10);
       const unit = (mat as any).unit || 'un.';
       const markup = typeof (data as any).config?.materialMarkup === 'number'
         ? (data as any).config.materialMarkup
@@ -501,25 +501,44 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
       const unitPrice = mat.cost * (1 + markup);
       const totalMat = unitPrice * mat.quantity;
       
-      doc.text(`• ${mat.name}`, margin + 5, currentY);
-      doc.text(`${mat.quantity} ${unit}`, pageWidth - margin - 35, currentY, { align: 'right' });
-      doc.text(`${totalMat.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
-      currentY += 6;
+      const nameX = margin + (isMobile ? 3 : 5);
+      const qtyX = isMobile ? (pageWidth - margin - 20) : (pageWidth - margin - 35);
+      const priceX = pageWidth - margin;
+      const maxNameWidth = isMobile ? (qtyX - nameX - 3) : 120;
+      
+      const splitName = doc.splitTextToSize(`• ${mat.name}`, maxNameWidth);
+      
+      splitName.forEach((line: string, index: number) => {
+        if (index > 0) {
+          checkPageBreak(isMobile ? 4.5 : 6);
+        }
+        doc.text(line, nameX, currentY);
+        
+        if (index === 0) {
+          doc.text(`${mat.quantity} ${unit}`, qtyX, currentY, { align: 'right' });
+          doc.text(`${totalMat.toFixed(2)} €`, priceX, currentY, { align: 'right' });
+        }
+        
+        if (index < splitName.length - 1) {
+          currentY += isMobile ? 4.5 : 6;
+        }
+      });
+      currentY += isMobile ? 4.8 : 6;
     });
   } else {
     checkPageBreak(6);
     doc.text(`• ${t.noMaterials}`, margin + 5, currentY);
-    currentY += 6;
+    currentY += isMobile ? 4.5 : 6;
   }
 
   // Subtotal Materiales
   checkPageBreak(8);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(isMobile ? 9 : 10);
+  doc.setFontSize(isMobile ? 7.5 : 10);
   doc.setTextColor(0, 0, 0);
   const subtotalMatLabel = targetLang === 'pt' ? 'Subtotal Materiais' : targetLang === 'en' ? 'Materials Subtotal' : 'Subtotal Materiales';
   doc.text(`${subtotalMatLabel}: ${calculatedMaterialsSubtotal.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
-  currentY += 6;
+  currentY += isMobile ? 4.5 : 6;
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'normal');
 
@@ -531,9 +550,9 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.line(margin, currentY, pageWidth - margin, currentY);
 
   // 6. Total General
-  checkPageBreak(35);
-  currentY += 15;
-  doc.setFontSize(isMobile ? 12 : 16);
+  checkPageBreak(isMobile ? 20 : 35);
+  currentY += isMobile ? 8 : 15;
+  doc.setFontSize(isMobile ? 11.5 : 16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(209, 4, 41); // Kraken Red
   
@@ -543,30 +562,39 @@ export const generateBudgetPDF = async (data: PDFData, formatType: 'pc' | 'mobil
   doc.text(`${t.totalGeneral} ${subtotal.toFixed(2)} € ${showIVA ? `+ ${t.ivaLabel}` : ''}`, pageWidth - margin, currentY, { align: 'right' });
 
   // 7. Información de Pago
-  checkPageBreak(25);
-  currentY += 15;
-  doc.setFontSize(9);
+  checkPageBreak(isMobile ? 20 : 25);
+  currentY += isMobile ? 10 : 15;
+  doc.setFontSize(isMobile ? 7.5 : 9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(50, 50, 50);
-  doc.text("iban: DE95100110012356675960 (Eduardo Federico Martínez)", margin, currentY);
-  currentY += 5;
+  
+  const ibanText = "iban: DE95100110012356675960 (Eduardo Federico Martínez)";
+  const splitIban = doc.splitTextToSize(ibanText, pageWidth - (margin * 2));
+  splitIban.forEach((line: string) => {
+    checkPageBreak(5);
+    doc.text(line, margin, currentY);
+    currentY += isMobile ? 4.5 : 5;
+  });
+  
+  checkPageBreak(5);
   doc.text("mbway: +351 967 873 913", margin, currentY);
+  currentY += isMobile ? 4.5 : 5;
 
   // 8. Condiciones del Servicio (Letra chica / Términos legales)
-  currentY += 8; // Margen superior para separarlo visualmente de los datos bancarios
+  currentY += isMobile ? 5 : 8; // Margen superior para separarlo visualmente de los datos bancarios
   checkPageBreak(12);
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(isMobile ? 8 : 9);
+  doc.setFontSize(isMobile ? 7.5 : 9);
   doc.setTextColor(50, 50, 50);
   doc.text(t.termsTitle, margin, currentY);
-  currentY += 5;
+  currentY += isMobile ? 4 : 5;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(isMobile ? 5.5 : 6); // Color tenue "letra chica" y tamaño pequeño
+  doc.setFontSize(isMobile ? 5 : 6); // Color tenue "letra chica" y tamaño pequeño
   doc.setTextColor(110, 110, 110);
 
-  const spacingY = isMobile ? 2.5 : 3;
+  const spacingY = isMobile ? 2.2 : 3;
   t.termsText.forEach((paragraph: string) => {
     const splitParagraph = doc.splitTextToSize(paragraph, pageWidth - (margin * 2));
     splitParagraph.forEach((line: string) => {
