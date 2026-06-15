@@ -14,7 +14,8 @@ import {
   Layout,
   Eye,
   EyeOff,
-  X
+  X,
+  Wrench
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -39,7 +40,8 @@ import {
   getStoredPayments, 
   getStoredWorkOrders, 
   getStoredExpenses,
-  fetchConfig
+  fetchConfig,
+  fetchMaintenances
 } from '../lib/storage';
 import { calculateBudget } from '../lib/calculator';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -111,6 +113,7 @@ function Dashboard() {
   const [payments, setPayments] = React.useState<any[]>([]);
   const [workOrders, setWorkOrders] = React.useState<any[]>([]);
   const [expenses, setExpenses] = React.useState<any[]>([]);
+  const [maintenances, setMaintenances] = React.useState<any[]>([]);
   const [config, setConfig] = React.useState<any>(null);
 
   const [metrics, setMetrics] = React.useState({
@@ -131,13 +134,14 @@ function Dashboard() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [b, c, p, wo, e, conf] = await Promise.all([
+        const [b, c, p, wo, e, conf, m] = await Promise.all([
           getStoredBudgets(),
           getStoredClients(),
           getStoredPayments(),
           getStoredWorkOrders(),
           getStoredExpenses(),
-          fetchConfig()
+          fetchConfig(),
+          fetchMaintenances()
         ]);
         setBudgets(b);
         setClients(c);
@@ -145,6 +149,7 @@ function Dashboard() {
         setWorkOrders(wo);
         setExpenses(e);
         setConfig(conf);
+        setMaintenances(m || []);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -153,6 +158,24 @@ function Dashboard() {
     };
     loadData();
   }, []);
+
+  const alertMaintenances = React.useMemo(() => {
+    const today = new Date();
+    const endOfThisMonth = endOfMonth(today);
+
+    return maintenances.filter(m => {
+      if (m.status === 'Completado' || m.status === 'Realizado' || m.status === 'realizado' || m.status === 'completado') return false;
+      if (!m.nextRevisionDate) return false;
+      
+      try {
+        const [year, month, day] = m.nextRevisionDate.split('-').map(Number);
+        const revisionDate = new Date(year, month - 1, day || 15);
+        return revisionDate <= endOfThisMonth;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [maintenances]);
 
   // Chart variable selection
   const [barChartVariable, setBarChartVariable] = React.useState<'total' | 'aprobado' | 'profit'>('total');
@@ -447,6 +470,72 @@ function Dashboard() {
           </Link>
         </div>
       </header>
+
+      {/* Mantenimiento Preventivo Alerts Card */}
+      <div className={cn(
+        "kraken-card p-6 border-l-4 transition-all shadow-sm",
+        alertMaintenances.length > 0 
+          ? "border-l-orange-500 border-neutral-200 dark:border-neutral-800 bg-orange-50/10 dark:bg-orange-950/5" 
+          : "border-l-emerald-500 border-neutral-200 dark:border-neutral-800 bg-emerald-50/10 dark:bg-emerald-950/5"
+      )}>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "p-2.5 rounded-xl",
+              alertMaintenances.length > 0 ? "bg-orange-500/10 text-orange-605 animate-pulse" : "bg-emerald-500/10 text-emerald-600"
+            )}>
+              <AlertCircle size={22} />
+            </div>
+            <div>
+              <h3 className="font-bold text-neutral-900 dark:text-white text-base">Mantenimiento Preventivo</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">Alertas de revisiones periódicas planificadas</p>
+            </div>
+          </div>
+          <span className={cn(
+            "text-[10px] uppercase font-extrabold tracking-widest px-2.5 py-1 rounded-full",
+            alertMaintenances.length > 0 ? "bg-orange-100 text-orange-850 dark:bg-orange-900/45 dark:text-orange-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/45 dark:text-emerald-300"
+          )}>
+            {alertMaintenances.length > 0 ? `${alertMaintenances.length} REQUERIDOS` : "AL DÍA"}
+          </span>
+        </div>
+
+        {alertMaintenances.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+            {alertMaintenances.map((m) => {
+              const formattedNextDate = m.nextRevisionDate ? format(parseISO(m.nextRevisionDate), "dd MMM, yyyy", { locale: es }) : 'No definida';
+              return (
+                <div key={m.id} className="bg-white dark:bg-neutral-900/50 border border-neutral-150 dark:border-neutral-800/80 rounded-2xl p-4 flex flex-col justify-between gap-3 hover:border-orange-200 dark:hover:border-orange-800/40 transition-colors">
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-xs text-neutral-900 dark:text-white truncate max-w-[150px]">{m.clientData?.name}</span>
+                      <span className="text-[9px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded uppercase tracking-wider">Vence: {formattedNextDate}</span>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 lines-clamp-1">{m.clientData?.address || 'Sin dirección'}</p>
+                    {m.generalObservations && (
+                      <p className="text-[10px] text-neutral-400 italic mt-1.5 truncate">" {m.generalObservations} "</p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-neutral-50 dark:border-neutral-850 pt-2">
+                    <span className="text-[10px] text-neutral-450 uppercase font-bold">Estado: {m.status || 'Pendiente'}</span>
+                    <Link
+                      to={`/mantenimiento/nuevo?id=${m.id}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-extrabold text-white bg-kraken-orange hover:bg-orange-600 transition-colors px-3 py-1.5 rounded-xl shadow-sm"
+                    >
+                      <Wrench size={12} />
+                      <span>Iniciar Revisión</span>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/5 p-3 rounded-2xl">
+            <CheckCircle2 size={16} />
+            <span>Mantenimientos al día. Excelente trabajo coordinando preventivos.</span>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {cardSlots.slice(0, 4).map((metricId, index) => {
