@@ -10,13 +10,17 @@ import {
   X,
   AlertCircle,
   Clock,
-  ClipboardCheck
+  ClipboardCheck,
+  Camera,
+  Image,
+  Upload
 } from 'lucide-react';
 import { 
   fetchClients, 
   saveClient, 
   saveMaintenance, 
-  fetchMaintenances 
+  fetchMaintenances,
+  uploadMaintenancePhotos
 } from '../lib/storage';
 import { Client, MaintenanceItem, MaintenanceRecord } from '../types';
 import { toast } from 'sonner';
@@ -81,6 +85,12 @@ export default function NewMaintenance() {
   const [customEmployee, setCustomEmployee] = useState('');
   const [isCustomEmployeeActive, setIsCustomEmployeeActive] = useState(false);
 
+  // Photo upload and viewing states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
   const STANDARD_TECHNICIANS = ['Carlos R.', 'Luis M.', 'Ana S.', 'Laura G.'];
 
   // Dynamically load client list and loaded record if exist
@@ -102,6 +112,9 @@ export default function NewMaintenance() {
             setGeneralObservations(matchRecord.generalObservations || '');
             setStatus(matchRecord.status);
             setChecklist(matchRecord.checklist);
+            if (matchRecord.photos) {
+              setExistingPhotos(matchRecord.photos);
+            }
             
             // Language & Employee Assignments loader
             const savedLang = matchRecord.language || 'es';
@@ -240,7 +253,23 @@ export default function NewMaintenance() {
     const selectedClient = clients.find(c => c.id === selectedClientId);
 
     try {
+      setIsUploading(true);
       const finalId = recordId || 'maint_' + Math.random().toString(36).substring(2, 11);
+      
+      let uploadedUrls: string[] = [...existingPhotos];
+
+      if (selectedFiles.length > 0) {
+        const toastId = toast.loading('Subiendo imágenes de evidencia...');
+        try {
+          const newUrls = await uploadMaintenancePhotos(selectedFiles, finalId);
+          uploadedUrls = [...uploadedUrls, ...newUrls];
+          toast.success('Imágenes cargadas', { id: toastId });
+        } catch (err) {
+          console.error("Error uploading photos:", err);
+          toast.error('Error al subir fotos. Se continuará respondiendo/guardando.', { id: toastId });
+        }
+      }
+
       const recordPayload: MaintenanceRecord = {
         id: finalId,
         clientId: selectedClientId,
@@ -257,7 +286,8 @@ export default function NewMaintenance() {
         status,
         createdAt: new Date().toISOString(),
         language,
-        assignedEmployee: isCustomEmployeeActive ? customEmployee : assignedEmployee
+        assignedEmployee: isCustomEmployeeActive ? customEmployee : assignedEmployee,
+        photos: uploadedUrls
       };
 
       await saveMaintenance(recordPayload);
@@ -265,6 +295,8 @@ export default function NewMaintenance() {
       navigate('/mantenimiento');
     } catch (e) {
       toast.error('Error al guardar la ficha técnica de revisión');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -440,6 +472,109 @@ export default function NewMaintenance() {
                     onChange={(e) => setGeneralObservations(e.target.value)}
                     className="kraken-input min-h-[140px] resize-none"
                   />
+                </div>
+              </div>
+
+              {/* Evidence/Photos Section */}
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 flex items-center gap-2">
+                    <Camera size={16} className="text-kraken-orange" />
+                    <span>Evidencia Fotográfica</span>
+                  </h4>
+                  <span className="text-[10px] bg-neutral-100 dark:bg-neutral-850 text-neutral-600 dark:text-neutral-400 font-bold px-2 py-0.5 rounded">
+                    {existingPhotos.length + selectedFiles.length} / 20
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {/* File Upload Zone */}
+                  <div className="relative border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-kraken-orange dark:hover:border-kraken-orange transition-colors rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const filesArray = Array.from(e.target.files);
+                          const totalCount = existingPhotos.length + selectedFiles.length + filesArray.length;
+                          if (totalCount > 20) {
+                            toast.error('Puedes cargar un máximo de 20 fotos en total.');
+                            return;
+                          }
+                          const newFiles = [...selectedFiles, ...filesArray].slice(0, 20 - existingPhotos.length);
+                          setSelectedFiles(newFiles);
+                          
+                          // Revoke old urls to avoid memory leak
+                          previewUrls.forEach(url => URL.revokeObjectURL(url));
+                          const urls = newFiles.map(file => URL.createObjectURL(file));
+                          setPreviewUrls(urls);
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Upload className="text-neutral-400 group-hover:text-kraken-orange transition-colors mb-2" size={24} />
+                    <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Seleccionar fotos</p>
+                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">Soporta múltiples archivos de imagen (Máx 20)</p>
+                  </div>
+
+                  {/* Thumbnail Grids */}
+                  {(existingPhotos.length > 0 || selectedFiles.length > 0) && (
+                    <div className="space-y-3">
+                      {/* New Photos Preview */}
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Por subir:</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {previewUrls.map((url, idx) => (
+                              <div key={`new-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950">
+                                <img src={url} alt="Previsualización" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedFiles = [...selectedFiles];
+                                    updatedFiles.splice(idx, 1);
+                                    setSelectedFiles(updatedFiles);
+                                    
+                                    URL.revokeObjectURL(previewUrls[idx]);
+                                    const updatedPreviews = [...previewUrls];
+                                    updatedPreviews.splice(idx, 1);
+                                    setPreviewUrls(updatedPreviews);
+                                  }}
+                                  className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Existing Loaded Photos */}
+                      {existingPhotos.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Fotos guardadas:</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {existingPhotos.map((url, idx) => (
+                              <div key={`existing-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950">
+                                <img src={url} alt="Guardada" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setExistingPhotos(prev => prev.filter(p => p !== url));
+                                  }}
+                                  className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
