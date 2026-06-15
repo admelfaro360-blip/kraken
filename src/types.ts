@@ -79,6 +79,7 @@ export interface MaintenanceRecord {
   createdAt: string;
   language?: 'es' | 'pt' | 'en';
   assignedEmployee?: string;
+  photos?: string[];
 }
 
 export interface LaborAssignment {
