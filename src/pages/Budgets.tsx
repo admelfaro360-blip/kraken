@@ -327,7 +327,7 @@ export default function Budgets() {
         },
         date: formattedDate,
         description: budget.description || 'Sin descripción',
-        calculation: {
+        calculation: budget.calculation || {
           subtotal: subtotal,
           total: total,
           iva: iva,
