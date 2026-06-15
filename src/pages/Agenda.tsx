@@ -36,9 +36,10 @@ import {
   deleteWorkOrder,
   fetchAgendaNotes,
   saveAgendaNote,
-  deleteAgendaNote
+  deleteAgendaNote,
+  fetchMaintenances
 } from '../lib/storage';
-import { Budget, WorkOrder, AgendaNote } from '../types';
+import { Budget, WorkOrder, AgendaNote, MaintenanceRecord } from '../types';
 import { formatFirebaseDate } from '../lib/utils';
 import { generateWeeklyAgendaPDF, WeeklyAgendaPDFData } from '../lib/pdfGenerator';
 import { clsx, type ClassValue } from 'clsx';
@@ -81,6 +82,7 @@ export default function Agenda() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [agendaNotes, setAgendaNotes] = useState<AgendaNote[]>([]);
+  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>([]);
   const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -96,13 +98,15 @@ export default function Agenda() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [b, o, n] = await Promise.all([
+        const [b, o, n, m] = await Promise.all([
           fetchBudgets(),
           fetchWorkOrders(),
-          fetchAgendaNotes()
+          fetchAgendaNotes(),
+          fetchMaintenances()
         ]);
         
         setAgendaNotes(n);
+        setMaintenances(m);
         // Auto-cleanup for ESPACIO FLUOR June/July 2026
         const toDelete = o.filter(wo => {
           if (!wo.clientName || !wo.startDate) return false;
@@ -176,7 +180,27 @@ export default function Agenda() {
       return noteDateStr === checkDayStr;
     });
 
-    return { budgets: dayBudgets, orders: dayOrders, notes: dayNotes };
+    const dayMaintenances = maintenances.filter(m => {
+      if (!m.date) return false;
+      const mDateStr = m.date.split('T')[0];
+      const checkDayStr = format(day, 'yyyy-MM-dd');
+      return mDateStr === checkDayStr;
+    });
+
+    const dayNextMaintenances = maintenances.filter(m => {
+      if (!m.nextRevisionDate) return false;
+      const mNextStr = m.nextRevisionDate.split('T')[0];
+      const checkDayStr = format(day, 'yyyy-MM-dd');
+      return mNextStr === checkDayStr;
+    });
+
+    return { 
+      budgets: dayBudgets, 
+      orders: dayOrders, 
+      notes: dayNotes,
+      maintenances: dayMaintenances,
+      nextMaintenances: dayNextMaintenances
+    };
   };
 
   const handleDayDoubleClick = (day: Date) => {
@@ -332,7 +356,7 @@ export default function Agenda() {
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
 
-  const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : { budgets: [], orders: [], notes: [] };
+  const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : { budgets: [], orders: [], notes: [], maintenances: [], nextMaintenances: [] };
 
   return (
     <div className="space-y-8">
@@ -397,7 +421,7 @@ export default function Agenda() {
 
             <div className="grid grid-cols-7">
               {calendarDays.map((day, i) => {
-                const { budgets: b, orders: o, notes: n } = getEventsForDay(day);
+                const { budgets: b, orders: o, notes: n, maintenances: m, nextMaintenances: nm } = getEventsForDay(day);
                 const isSelected = selectedDay && isSameDay(day, selectedDay);
                 const isCurrentMonth = isSameMonth(day, monthStart);
 
@@ -445,6 +469,18 @@ export default function Agenda() {
                           <span className="text-[6px] opacity-70 uppercase tracking-tighter">{item.crewId || 'OT'}</span>
                         </div>
                       ))}
+                      {m.map((item, idx) => (
+                        <div key={`m-${idx}`} className="text-[8px] px-1.5 py-0.5 rounded truncate font-bold leading-tight bg-blue-500 text-white border border-blue-600 flex flex-col">
+                          <span>Mantenimiento: {item.clientData?.name || 'Mantenimiento'}</span>
+                          <span className="text-[6px] opacity-80 uppercase tracking-tighter">REVISIÓN</span>
+                        </div>
+                      ))}
+                      {nm.map((item, idx) => (
+                        <div key={`nm-${idx}`} className="text-[8px] px-1.5 py-0.5 rounded truncate font-bold leading-tight bg-orange-500 text-white border border-orange-600 flex flex-col animate-pulse">
+                          <span>Mantenimiento: {item.clientData?.name || 'Mantenimiento'}</span>
+                          <span className="text-[6px] opacity-80 uppercase tracking-tighter">PRÓXIMO</span>
+                        </div>
+                      ))}
                     </div>
                   </button>
                 );
@@ -462,7 +498,11 @@ export default function Agenda() {
             </h3>
 
             <div className="space-y-4">
-              {selectedDayEvents.budgets.length === 0 && selectedDayEvents.orders.length === 0 && selectedDayEvents.notes.length === 0 ? (
+              {selectedDayEvents.budgets.length === 0 && 
+               selectedDayEvents.orders.length === 0 && 
+               selectedDayEvents.notes.length === 0 &&
+               (!selectedDayEvents.maintenances || selectedDayEvents.maintenances.length === 0) &&
+               (!selectedDayEvents.nextMaintenances || selectedDayEvents.nextMaintenances.length === 0) ? (
                 <div className="text-center py-12 px-4">
                   <div className="w-12 h-12 bg-neutral-50 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Clock size={24} className="text-neutral-300" />
@@ -490,6 +530,37 @@ export default function Agenda() {
                       </div>
                       <h4 className="font-bold leading-tight dark:text-white">{n.title}</h4>
                       {n.content && <p className="text-xs text-neutral-600 dark:text-neutral-400">{n.content}</p>}
+                    </div>
+                  ))}
+                  {selectedDayEvents.maintenances?.map((m) => (
+                    <div key={m.id} className="p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 space-y-2 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                          <Clock size={12} />
+                          Mantenimiento Realizado
+                        </span>
+                        <span className="text-xs font-bold opacity-80 text-blue-600 dark:text-blue-400">Completado</span>
+                      </div>
+                      <h4 className="font-bold leading-tight dark:text-white">Mantenimiento: {m.clientData?.name}</h4>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">Dirección: {m.clientData?.address}</p>
+                      {m.assignedEmployee && (
+                        <span className="text-[9px] px-2.5 py-1 bg-blue-200/50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full font-bold uppercase">
+                          Tec: {m.assignedEmployee}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {selectedDayEvents.nextMaintenances?.map((m) => (
+                    <div key={`nm-${m.id}`} className="p-4 rounded-2xl border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/20 space-y-2 shadow-sm animate-pulse">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                          <AlertCircle size={12} />
+                          Próximo Mantenimiento Recomendado
+                        </span>
+                        <span className="text-xs font-bold opacity-80 text-orange-500">Pendiente</span>
+                      </div>
+                      <h4 className="font-bold leading-tight dark:text-white">Mantenimiento: {m.clientData?.name}</h4>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">Dirección: {m.clientData?.address}</p>
                     </div>
                   ))}
                   {selectedDayEvents.budgets.map((b) => (
