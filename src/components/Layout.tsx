@@ -16,7 +16,8 @@ import {
   Calendar,
   TrendingDown,
   ClipboardCheck,
-  Handshake
+  Handshake,
+  Car
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -45,6 +46,7 @@ export default function Layout({ onLogout, user }: LayoutProps) {
     { name: 'Cobros', icon: Wallet, path: '/cobros' },
     { name: 'Gastos', icon: TrendingDown, path: '/gastos' },
     { name: 'Reportes', icon: BarChart3, path: '/reportes' },
+    { name: 'Vehículos', icon: Car, path: '/vehiculos' },
   ];
 
   const hasMaintenance = user?.role === 'admin' || user?.allowedModules?.includes('maintenance');
