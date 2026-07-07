@@ -219,3 +219,59 @@ export interface ClientAgreement {
   language: 'es' | 'en' | 'pt';
 }
 
+export interface FuelPurchase {
+  id: string;
+  date: string;
+  km: number;
+  liters: number;
+  pricePerLiter: number;
+  totalCost: number;
+  notes?: string;
+}
+
+export interface MaintenanceServiceState {
+  lastDoneKm: number;
+  lastDoneDate: string;
+  intervalKm: number;
+  intervalMonths: number;
+  nextDueKm: number;
+  nextDueDate: string;
+}
+
+export interface MaintenanceAction {
+  id: string;
+  date: string;
+  km: number;
+  type: 'Cambio de Aceite' | 'Filtro Aire' | 'Filtro Aceite' | 'Revisión Técnica' | 'Otro';
+  description: string;
+  cost: number;
+  notes?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  brand: string;
+  model: string;
+  plate: string;
+  year?: number;
+  initialKm: number;
+  currentKm: number;
+  kmPerMonth: number;
+  
+  // Specific services
+  oilChange: MaintenanceServiceState;
+  airFilter: MaintenanceServiceState;
+  oilFilter: MaintenanceServiceState;
+  technicalRevision: {
+    lastDoneDate: string;
+    nextDueDate: string;
+  };
+  
+  // History logs
+  fuelHistory: FuelPurchase[];
+  maintenanceHistory: MaintenanceAction[];
+  
+  createdAt: string;
+}
+
+
