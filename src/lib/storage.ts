@@ -1,4 +1,4 @@
-import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord, ClientAgreement } from '../types';
+import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord, ClientAgreement, Vehicle } from '../types';
 import { db, auth, storage } from './firebase';
 import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
@@ -22,6 +22,7 @@ const USERS_COLLECTION = 'users';
 const AGENDA_NOTES_COLLECTION = 'agenda_notes';
 const MAINTENANCE_COLLECTION = 'maintenance';
 const AGREEMENTS_COLLECTION = 'agreements';
+const VEHICLES_COLLECTION = 'vehicles';
 
 enum OperationType {
   CREATE = 'create',
@@ -443,6 +444,36 @@ export const uploadMaintenancePhotos = async (files: File[], maintenanceId: stri
       });
     });
     return Promise.all(base64Promises);
+  }
+};
+
+export const fetchVehreements = async (): Promise<ClientAgreement[]> => {
+  return fetchAgreements();
+};
+
+export const fetchVehicles = async (): Promise<Vehicle[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, VEHICLES_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as Vehicle);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, VEHICLES_COLLECTION);
+    return [];
+  }
+};
+
+export const saveVehicle = async (vehicle: Vehicle) => {
+  try {
+    await setDoc(doc(db, VEHICLES_COLLECTION, vehicle.id), vehicle);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, VEHICLES_COLLECTION);
+  }
+};
+
+export const deleteVehicle = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, VEHICLES_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, VEHICLES_COLLECTION);
   }
 };
 
