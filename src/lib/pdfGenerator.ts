@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CalculationResult, Phase, Material, Budget, WorkOrder, MaintenanceRecord } from '../types';
+import { CalculationResult, Phase, Material, Budget, WorkOrder, MaintenanceRecord, ClientAgreement } from '../types';
 import { translateText, translateMaterials } from './gemini';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -1058,3 +1058,394 @@ export const generateMaintenancePDF = async (record: MaintenanceRecord, override
 
   return doc;
 };
+
+export const generateAgreementPDF = async (agreement: ClientAgreement, formatType: 'pc' | 'mobile' = 'pc'): Promise<jsPDF> => {
+  const isMobile = formatType === 'mobile';
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: isMobile ? [100, 200] : 'a4'
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = isMobile ? 10 : 20;
+
+  const lang = agreement.language || 'pt';
+
+  const translationsMap: Record<string, any> = {
+    pt: {
+      title: 'CONVÉNIO DE PRESTAÇÃO DE SERVIÇOS',
+      clientSection: 'DADOS DO CLIENTE',
+      client: 'Cliente:',
+      address: 'Morada:',
+      nif: 'NIF:',
+      contact: 'Contacto:',
+      phone: 'Telefone:',
+      email: 'Email:',
+      detailsSection: 'DETALHES DO CONVÉNIO',
+      startDate: 'Data de Início:',
+      endDate: 'Data de Fim:',
+      weekdays: 'Dias de Trabalho:',
+      weeksToWork: 'Semanas a Trabalhar:',
+      clausesSection: 'CLÁUSULAS DO ACORDO',
+      footerText: 'Somos confiança, somos Kraken'
+    },
+    es: {
+      title: 'CONVENIO DE PRESTACIÓN DE SERVICIOS',
+      clientSection: 'DATOS DEL CLIENTE',
+      client: 'Cliente:',
+      address: 'Dirección:',
+      nif: 'NIF:',
+      contact: 'Contacto:',
+      phone: 'Teléfono:',
+      email: 'Email:',
+      detailsSection: 'DETALLES DEL CONVENIO',
+      startDate: 'Fecha de Inicio:',
+      endDate: 'Fecha de Fin:',
+      weekdays: 'Días de Trabajo:',
+      weeksToWork: 'Semanas a Trabajar:',
+      clausesSection: 'CLÁUSULAS DEL ACUERDO',
+      footerText: 'Somos confianza, somos Kraken'
+    },
+    en: {
+      title: 'SERVICE PROVISION AGREEMENT',
+      clientSection: 'CLIENT DETAILS',
+      client: 'Client:',
+      address: 'Address:',
+      nif: 'Tax ID (NIF):',
+      contact: 'Contact Person:',
+      phone: 'Phone:',
+      email: 'Email:',
+      detailsSection: 'AGREEMENT DETAILS',
+      startDate: 'Start Date:',
+      endDate: 'End Date:',
+      weekdays: 'Work Days:',
+      weeksToWork: 'Weeks to Work:',
+      clausesSection: 'TERMS & CLAUSES',
+      footerText: 'Somos confiança, somos Kraken'
+    }
+  };
+
+  // Helper to translate weekdays to target language
+  const normalizeWeekdaysMap: Record<string, string> = {
+    'segunda': 'mon', 'terça': 'tue', 'quarta': 'wed', 'quinta': 'thu', 'sexta': 'fri', 'sábado': 'sat', 'domingo': 'sun',
+    'segunda-feira': 'mon', 'terça-feira': 'tue', 'quarta-feira': 'wed', 'quinta-feira': 'thu', 'sexta-feira': 'fri',
+    'lunes': 'mon', 'martes': 'tue', 'miércoles': 'wed', 'miercoles': 'wed', 'jueves': 'thu', 'viernes': 'fri', 'sabado': 'sat',
+    'monday': 'mon', 'tuesday': 'tue', 'wednesday': 'wed', 'thursday': 'thu', 'friday': 'fri', 'saturday': 'sat', 'sunday': 'sun',
+    'mon': 'mon', 'tue': 'tue', 'wed': 'wed', 'thu': 'thu', 'fri': 'fri', 'sat': 'sat', 'sun': 'sun'
+  };
+
+  const weekdayTranslationsMap: Record<string, Record<string, string>> = {
+    pt: { mon: 'Segunda', tue: 'Terça', wed: 'Quarta', thu: 'Quinta', fri: 'Sexta', sat: 'Sábado', sun: 'Domingo' },
+    es: { mon: 'Lunes', tue: 'Martes', wed: 'Miércoles', thu: 'Jueves', fri: 'Viernes', sat: 'Sábado', sun: 'Domingo' },
+    en: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' }
+  };
+
+  const translateWeekday = (day: string, targetLang: 'pt' | 'es' | 'en'): string => {
+    const norm = normalizeWeekdaysMap[day.toLowerCase().trim()];
+    if (norm && weekdayTranslationsMap[targetLang]) {
+      return weekdayTranslationsMap[targetLang][norm];
+    }
+    return day;
+  };
+
+  const drawFormattedLine = (pdfDoc: jsPDF, lineText: string, x: number, y: number, defaultSize: number) => {
+    const parts = lineText.split(/(\*\*[^*]+\*\*)/g);
+    let currentX = x;
+    
+    parts.forEach((part) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const cleanPart = part.substring(2, part.length - 2);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.setFontSize(defaultSize);
+        pdfDoc.text(cleanPart, currentX, y);
+        currentX += pdfDoc.getTextWidth(cleanPart);
+      } else {
+        const subParts = part.split(/(\*[^*]+\*)/g);
+        subParts.forEach((subPart) => {
+          if (subPart.startsWith('*') && subPart.endsWith('*')) {
+            const cleanSub = subPart.substring(1, subPart.length - 1);
+            pdfDoc.setFont('helvetica', 'italic');
+            pdfDoc.setFontSize(defaultSize);
+            pdfDoc.text(cleanSub, currentX, y);
+            currentX += pdfDoc.getTextWidth(cleanSub);
+          } else {
+            const underlineParts = subPart.split(/(__[^_]+__)/g);
+            underlineParts.forEach((uPart) => {
+              if (uPart.startsWith('__') && uPart.endsWith('__')) {
+                const cleanU = uPart.substring(2, uPart.length - 2);
+                pdfDoc.setFont('helvetica', 'normal');
+                pdfDoc.setFontSize(defaultSize);
+                pdfDoc.text(cleanU, currentX, y);
+                // Draw a line below the text for underline effect
+                const textWidth = pdfDoc.getTextWidth(cleanU);
+                pdfDoc.setLineWidth(0.2);
+                pdfDoc.setDrawColor(40, 40, 40);
+                pdfDoc.line(currentX, y + 0.6, currentX + textWidth, y + 0.6);
+                currentX += textWidth;
+              } else {
+                pdfDoc.setFont('helvetica', 'normal');
+                pdfDoc.setFontSize(defaultSize);
+                pdfDoc.text(uPart, currentX, y);
+                currentX += pdfDoc.getTextWidth(uPart);
+              }
+            });
+          }
+        });
+      }
+    });
+    pdfDoc.setFont('helvetica', 'normal');
+  };
+
+  const t = translationsMap[lang] || translationsMap.pt;
+
+  let currentY = 10;
+
+  const drawHeaderAndFooter = (pageNumber: number) => {
+    // Header
+    const headerHeight = isMobile ? 25 : 35;
+    doc.setFillColor(10, 10, 10);
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+    try {
+      const logoUrl = "/logo.png";
+      const logoWidth = isMobile ? 45 : 65;
+      const logoHeight = isMobile ? 18 : 26;
+      doc.addImage(logoUrl, 'PNG', (pageWidth - logoWidth) / 2, (headerHeight - logoHeight) / 2, logoWidth, logoHeight);
+    } catch (e) {
+      console.warn("Could not add logo to PDF", e);
+    }
+
+    // Red bar below header
+    const redBarHeight = isMobile ? 2 : 3;
+    doc.setFillColor(209, 4, 41);
+    doc.rect(0, headerHeight, pageWidth, redBarHeight, 'F');
+
+    // Footer Red Banner
+    const footerHeight = isMobile ? 12 : 16;
+    doc.setFillColor(209, 4, 41);
+    doc.rect(0, pageHeight - footerHeight, pageWidth, footerHeight, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(isMobile ? 10 : 14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Somos confiança, somos Kraken', pageWidth / 2, pageHeight - (footerHeight / 2) + (isMobile ? 1.5 : 2), { align: 'center' });
+  };
+
+  // Helper to check for page break
+  const checkPageBreak = (neededHeight: number) => {
+    const bottomLimit = pageHeight - (isMobile ? 16 : 22);
+    if (currentY + neededHeight > bottomLimit) {
+      doc.addPage();
+      drawHeaderAndFooter(doc.getNumberOfPages());
+      currentY = (isMobile ? 25 : 35) + (isMobile ? 8 : 12); // Start below header + red bar
+      return true;
+    }
+    return false;
+  };
+
+  // Draw first page header and footer
+  drawHeaderAndFooter(1);
+  currentY = (isMobile ? 25 : 35) + (isMobile ? 10 : 15);
+
+  // Title
+  doc.setTextColor(18, 18, 18);
+  doc.setFontSize(isMobile ? 12 : 16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(t.title, pageWidth / 2, currentY, { align: 'center' });
+  currentY += isMobile ? 8 : 12;
+
+  // Client Details Section
+  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(209, 4, 41); // Red Section Title
+  doc.text(t.clientSection, margin, currentY);
+  currentY += isMobile ? 5 : 7;
+
+  // Thin separator line
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.25);
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += isMobile ? 5 : 7;
+
+  // Client details text
+  doc.setFontSize(isMobile ? 8.5 : 10.5);
+  doc.setTextColor(40, 40, 40);
+
+  const clientInfo = [
+    { label: t.client, value: agreement.clientData.name },
+    { label: t.address, value: agreement.clientData.address },
+    { label: t.nif, value: agreement.clientData.nif || 'N/A' },
+    { label: t.contact, value: agreement.clientData.contact || 'N/A' },
+    { label: t.phone, value: agreement.clientData.phone },
+    { label: t.email, value: agreement.clientData.email || 'N/A' },
+  ];
+
+  clientInfo.forEach((info) => {
+    checkPageBreak(isMobile ? 5 : 7);
+    doc.setFont('helvetica', 'bold');
+    doc.text(info.label, margin, currentY);
+    
+    doc.setFont('helvetica', 'normal');
+    const valueX = margin + (isMobile ? 20 : 30);
+    const splitVal = doc.splitTextToSize(info.value, pageWidth - valueX - margin);
+    doc.text(splitVal, valueX, currentY);
+    
+    currentY += (splitVal.length * (isMobile ? 4.5 : 6)) + 1;
+  });
+
+  currentY += isMobile ? 3 : 5;
+
+  // Agreement Details Section
+  checkPageBreak(isMobile ? 30 : 45);
+  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(209, 4, 41);
+  doc.text(t.detailsSection, margin, currentY);
+  currentY += isMobile ? 5 : 7;
+
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += isMobile ? 5 : 7;
+
+  doc.setFontSize(isMobile ? 8.5 : 10.5);
+  doc.setTextColor(40, 40, 40);
+
+  const weekdaysStr = agreement.weekdays && agreement.weekdays.length > 0 
+    ? agreement.weekdays.map(d => translateWeekday(d, lang)).join(', ') 
+    : 'N/A';
+
+  const detailsInfo = [
+    { label: t.startDate, value: agreement.startDate },
+    { label: t.endDate, value: agreement.endDate },
+    { label: t.weekdays, value: weekdaysStr },
+    { label: t.weeksToWork, value: String(agreement.weeksToWork) },
+  ];
+
+  detailsInfo.forEach((info) => {
+    checkPageBreak(isMobile ? 5 : 7);
+    doc.setFont('helvetica', 'bold');
+    doc.text(info.label, margin, currentY);
+    
+    doc.setFont('helvetica', 'normal');
+    const valueX = margin + (isMobile ? 35 : 45);
+    const splitVal = doc.splitTextToSize(info.value, pageWidth - valueX - margin);
+    doc.text(splitVal, valueX, currentY);
+    
+    currentY += (splitVal.length * (isMobile ? 4.5 : 6)) + 1;
+  });
+
+  currentY += isMobile ? 4 : 8;
+
+  // Free text clauses section
+  checkPageBreak(isMobile ? 30 : 40);
+  doc.setFontSize(isMobile ? 10 : 12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(209, 4, 41);
+  doc.text(t.clausesSection, margin, currentY);
+  currentY += isMobile ? 5 : 7;
+
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += isMobile ? 6 : 9;
+
+  // Main Agreement text with formatting support
+  const contentParagraphs = agreement.content.split('\n');
+  contentParagraphs.forEach((paragraph) => {
+    const trimmed = paragraph.trim();
+    if (!trimmed) {
+      currentY += isMobile ? 3 : 5;
+      return;
+    }
+
+    // Check for Horizontal Rule
+    if (trimmed === '---') {
+      checkPageBreak(isMobile ? 4 : 6);
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += isMobile ? 5 : 8;
+      return;
+    }
+
+    // Check for H1 Title
+    if (trimmed.startsWith('# ')) {
+      const titleText = trimmed.substring(2);
+      doc.setFontSize(isMobile ? 11 : 14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(209, 4, 41); // red H1
+      
+      const splitTitle = doc.splitTextToSize(titleText, pageWidth - (margin * 2));
+      splitTitle.forEach((line: string) => {
+        checkPageBreak(isMobile ? 6 : 8);
+        doc.text(line, margin, currentY);
+        currentY += isMobile ? 5 : 7;
+      });
+      currentY += isMobile ? 2 : 4;
+      return;
+    }
+
+    // Check for H2 Title
+    if (trimmed.startsWith('## ')) {
+      const titleText = trimmed.substring(3);
+      doc.setFontSize(isMobile ? 9.5 : 12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(18, 18, 18);
+      
+      const splitTitle = doc.splitTextToSize(titleText, pageWidth - (margin * 2));
+      splitTitle.forEach((line: string) => {
+        checkPageBreak(isMobile ? 5 : 7);
+        doc.text(line, margin, currentY);
+        currentY += isMobile ? 4.5 : 6;
+      });
+      currentY += isMobile ? 1.5 : 3;
+      return;
+    }
+
+    // Check for Bullet list
+    let isBullet = false;
+    let bulletText = paragraph;
+    if (trimmed.startsWith('• ')) {
+      isBullet = true;
+      bulletText = trimmed.substring(2);
+    } else if (trimmed.startsWith('* ')) {
+      isBullet = true;
+      bulletText = trimmed.substring(2);
+    } else if (trimmed.startsWith('- ')) {
+      isBullet = true;
+      bulletText = trimmed.substring(2);
+    }
+
+    doc.setFontSize(isMobile ? 8.5 : 10);
+    doc.setTextColor(10, 10, 10);
+
+    if (isBullet) {
+      const indentX = isMobile ? 4 : 6;
+      const textWidthLimit = pageWidth - (margin * 2) - indentX;
+      const splitLines = doc.splitTextToSize(bulletText, textWidthLimit);
+      
+      splitLines.forEach((line: string, index: number) => {
+        checkPageBreak(isMobile ? 5 : 7);
+        if (index === 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.text('•', margin + (isMobile ? 1 : 2), currentY);
+        }
+        
+        doc.setFont('helvetica', 'normal');
+        drawFormattedLine(doc, line, margin + indentX, currentY, isMobile ? 8.5 : 10);
+        currentY += isMobile ? 4.5 : 6;
+      });
+    } else {
+      const splitLines = doc.splitTextToSize(paragraph, pageWidth - (margin * 2));
+      splitLines.forEach((line: string) => {
+        checkPageBreak(isMobile ? 5 : 7);
+        doc.setFont('helvetica', 'normal');
+        drawFormattedLine(doc, line, margin, currentY, isMobile ? 8.5 : 10);
+        currentY += isMobile ? 4.5 : 6;
+      });
+    }
+    currentY += isMobile ? 2.5 : 4;
+  });
+
+  return doc;
+};
+
