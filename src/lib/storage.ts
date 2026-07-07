@@ -1,4 +1,4 @@
-import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord } from '../types';
+import { Budget, Client, WorkOrder, Expense, AgendaNote, MaintenanceRecord, ClientAgreement } from '../types';
 import { db, auth, storage } from './firebase';
 import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
@@ -21,6 +21,7 @@ const CONFIG_COLLECTION = 'config';
 const USERS_COLLECTION = 'users';
 const AGENDA_NOTES_COLLECTION = 'agenda_notes';
 const MAINTENANCE_COLLECTION = 'maintenance';
+const AGREEMENTS_COLLECTION = 'agreements';
 
 enum OperationType {
   CREATE = 'create',
@@ -389,6 +390,33 @@ export const deleteMaintenance = async (id: string) => {
     handleFirestoreError(e, OperationType.DELETE, MAINTENANCE_COLLECTION);
   }
 };
+
+export const fetchAgreements = async (): Promise<ClientAgreement[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, AGREEMENTS_COLLECTION));
+    return querySnapshot.docs.map(doc => doc.data() as ClientAgreement);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, AGREEMENTS_COLLECTION);
+    return [];
+  }
+};
+
+export const saveAgreement = async (agreement: ClientAgreement) => {
+  try {
+    await setDoc(doc(db, AGREEMENTS_COLLECTION, agreement.id), agreement);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, AGREEMENTS_COLLECTION);
+  }
+};
+
+export const deleteAgreement = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, AGREEMENTS_COLLECTION, id));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, AGREEMENTS_COLLECTION);
+  }
+};
+
 
 export const uploadMaintenancePhotos = async (files: File[], maintenanceId: string): Promise<string[]> => {
   try {
