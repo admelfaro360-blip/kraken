@@ -198,3 +198,24 @@ export interface Expense {
   method: 'Efectivo' | 'Transferencia' | 'Tarjeta de Débito' | 'Tarjeta de Crédito';
   subCategory?: string; // Para desglosar categorías como Costos Fijos
 }
+
+export interface ClientAgreement {
+  id: string;
+  clientId?: string;
+  clientData: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+    nif?: string;
+    contact?: string;
+  };
+  startDate: string;
+  endDate: string;
+  weekdays: string[];
+  weeksToWork: number;
+  content: string;
+  createdAt: string;
+  language: 'es' | 'en' | 'pt';
+}
+
