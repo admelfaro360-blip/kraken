@@ -117,6 +117,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /agreements/{agreementId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /vehicles/{vehicleId} {
+      allow read, write: if isAuthenticated();
+    }
+
     match /config/business {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
