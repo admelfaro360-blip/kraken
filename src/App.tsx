@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
+import Agreements from './pages/Agreements';
 import Budgets from './pages/Budgets';
 import NewBudget from './pages/NewBudget';
 import WorkOrders from './pages/WorkOrders';
@@ -140,6 +141,7 @@ export default function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="clientes" element={<Clients />} />
+              <Route path="convenios" element={<Agreements />} />
               <Route path="presupuestos" element={<Budgets />} />
               <Route path="presupuestos/nuevo" element={<NewBudget />} />
               <Route path="agenda" element={<Agenda />} />
