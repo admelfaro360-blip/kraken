@@ -15,7 +15,8 @@ import {
   Moon,
   Calendar,
   TrendingDown,
-  ClipboardCheck
+  ClipboardCheck,
+  Handshake
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -37,6 +38,7 @@ export default function Layout({ onLogout, user }: LayoutProps) {
   const baseItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { name: 'Clientes', icon: Users, path: '/clientes' },
+    { name: 'Convenios', icon: Handshake, path: '/convenios' },
     { name: 'Presupuestos', icon: FileText, path: '/presupuestos' },
     { name: 'Agenda', icon: Calendar, path: '/agenda' },
     { name: 'Órdenes de Trabajo', icon: ClipboardList, path: '/ordenes' },
