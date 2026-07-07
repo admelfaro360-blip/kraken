@@ -15,6 +15,7 @@ import Config from './pages/Config';
 import Login from './pages/Login';
 import MaintenanceList from './pages/MaintenanceList';
 import NewMaintenance from './pages/NewMaintenance';
+import Vehicles from './pages/Vehicles';
 import { ThemeProvider } from './lib/ThemeContext';
 import { Toaster } from 'sonner';
 import { auth } from './lib/firebase';
@@ -152,6 +153,7 @@ export default function App() {
               <Route path="config" element={<Config />} />
               <Route path="mantenimiento" element={<MaintenanceList />} />
               <Route path="mantenimiento/nuevo" element={<NewMaintenance />} />
+              <Route path="vehiculos" element={<Vehicles />} />
             </Route>
           </Routes>
         </BrowserRouter>
