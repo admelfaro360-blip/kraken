@@ -102,6 +102,20 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "clientId", "date", "status", "checklist"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Vehículo de la empresa y sus datos de mantenimiento",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "plate": { "type": "string" },
+        "currentKm": { "type": "number" },
+        "kmPerMonth": { "type": "number" }
+      },
+      "required": ["id", "brand", "model", "plate", "currentKm", "kmPerMonth"]
     }
   },
   "firestore": {
@@ -140,6 +154,14 @@
     "maintenance": {
       "schema": "MaintenanceRecord",
       "description": "Colección de registros de mantenimiento preventivo"
+    },
+    "agreements": {
+      "schema": "ClientAgreement",
+      "description": "Colección de convenios"
+    },
+    "vehicles": {
+      "schema": "Vehicle",
+      "description": "Colección de vehículos de la empresa y su ficha de mantenimiento"
     }
   }
 }
