@@ -77,6 +77,7 @@ export default function Budgets() {
   const [selectedMonth, setSelectedMonth] = useState(capitalizedMonth);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
   const itemsPerPage = 7;
 
   const topScrollRef = React.useRef<HTMLDivElement>(null);
@@ -98,13 +99,13 @@ export default function Budgets() {
   // Reset page number when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, isAccumulated, selectedYear, selectedMonth]);
+  }, [searchTerm, isAccumulated, selectedYear, selectedMonth, statusFilter]);
 
   useEffect(() => {
     if (tableContainerRef.current) {
       setTableWidth(tableContainerRef.current.scrollWidth);
     }
-  }, [budgets, searchTerm]);
+  }, [budgets, searchTerm, statusFilter]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -211,6 +212,10 @@ export default function Budgets() {
       
       if (!matchesSearch) return false;
 
+      if (statusFilter !== 'todos' && budget.status !== statusFilter) {
+        return false;
+      }
+
       if (!isAccumulated) {
         const budgetDate = budget.date;
         if (isNaN(budgetDate.getTime())) return false;
@@ -248,7 +253,7 @@ export default function Budgets() {
       });
     }
     return sortableBudgets;
-  }, [budgets, searchTerm, sortConfig, isAccumulated, selectedYear, selectedMonth]);
+  }, [budgets, searchTerm, sortConfig, isAccumulated, selectedYear, selectedMonth, statusFilter]);
 
   const totalPages = Math.ceil(sortedBudgets.length / itemsPerPage);
   
@@ -439,8 +444,31 @@ export default function Budgets() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full xl:w-auto">
-          <div className="relative flex-1 xl:w-96">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="kraken-input h-12 px-4 text-sm font-bold bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#FF4D00]/20 text-neutral-800 dark:text-neutral-200 cursor-pointer appearance-none pr-10 relative"
+              style={{ 
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', 
+                backgroundRepeat: 'no-repeat', 
+                backgroundPosition: 'right 16px center', 
+                backgroundSize: '16px' 
+              }}
+            >
+              <option value="todos" className="dark:bg-neutral-900">Todos los Estados</option>
+              <option value="borrador" className="dark:bg-neutral-900">Borrador</option>
+              <option value="enviado" className="dark:bg-neutral-900">Enviado</option>
+              <option value="aprobado" className="dark:bg-neutral-900">Aprobado</option>
+              <option value="ejecucion" className="dark:bg-neutral-900">En Ejecución</option>
+              <option value="finalizado" className="dark:bg-neutral-900">Finalizado</option>
+              <option value="cobrado" className="dark:bg-neutral-900">Cobrado</option>
+              <option value="rechazado" className="dark:bg-neutral-900">Rechazado</option>
+            </select>
+          </div>
+
+          <div className="relative flex-1 xl:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
             <input 
               type="text" 
