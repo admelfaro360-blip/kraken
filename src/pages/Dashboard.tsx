@@ -15,7 +15,8 @@ import {
   Eye,
   EyeOff,
   X,
-  Wrench
+  Wrench,
+  Calculator
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -65,31 +66,39 @@ const pieData = [
 
 const COLORS = ['#FF4D00', '#2B2D42'];
 
-const StatCard = ({ title, value, icon: Icon, trend, color = 'orange' }: any) => {
+const StatCard = ({ title, value, icon: Icon, trend, color = 'orange', subtitle }: any) => {
   const colorClasses: Record<string, string> = {
     orange: 'bg-kraken-orange/10 text-kraken-orange',
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
     amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
     neutral: 'bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400',
+    red: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
   };
 
   return (
-    <div className="kraken-card p-6 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className={cn("p-3 rounded-2xl", colorClasses[color] || colorClasses.orange)}>
-          <Icon size={24} />
-        </div>
-        {trend && (
-          <span className={`text-xs font-bold px-2 py-1 rounded-full ${trend > 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-kraken-orange/10 text-kraken-orange'}`}>
-            {trend > 0 ? '+' : ''}{trend}%
-          </span>
-        )}
-      </div>
+    <div className="kraken-card p-6 flex flex-col justify-between h-full min-h-[175px] gap-2">
       <div>
-        <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em]">{title}</p>
-        <h3 className="text-3xl font-black mt-1 tracking-tight text-neutral-900 dark:text-white">{value}</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className={cn("p-2.5 rounded-xl", colorClasses[color] || colorClasses.orange)}>
+            <Icon size={20} />
+          </div>
+          {trend && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${trend > 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-kraken-orange/10 text-kraken-orange'}`}>
+              {trend > 0 ? '+' : ''}{trend}%
+            </span>
+          )}
+        </div>
+        <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] truncate" title={title}>{title}</p>
+        <h3 className="text-lg sm:text-xl xl:text-2xl font-black mt-1 tracking-tight text-neutral-900 dark:text-white truncate" title={value}>{value}</h3>
       </div>
+      {subtitle ? (
+        <p className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-1 leading-normal border-t border-neutral-100 dark:border-neutral-800/60 pt-2 min-h-[36px] line-clamp-2">
+          {subtitle}
+        </p>
+      ) : (
+        <div className="h-[36px] mt-1 border-t border-transparent pt-2" />
+      )}
     </div>
   );
 };
@@ -119,7 +128,10 @@ function Dashboard() {
   const [metrics, setMetrics] = React.useState({
     totalFacturadoConIVA: 0,
     totalFacturadoSinIVA: 0,
+    totalFacturado: 0,
     totalBudgets: 0,
+    totalBudgetsAmount: 0,
+    approvedBudgetsCount: 0,
     approvalRate: 0,
     uniqueClients: 0,
     totalIVA: 0,
@@ -177,14 +189,78 @@ function Dashboard() {
     });
   }, [maintenances]);
 
+  // Simulator states
+  const [isCalculatorOpen, setIsCalculatorOpen] = React.useState(false);
+  const [calcTotalInput, setCalcTotalInput] = React.useState<string>('1480');
+  const [calcMargin, setCalcMargin] = React.useState<number>(30);
+  const [calcIva, setCalcIva] = React.useState<number>(23);
+  const [calcGuarantee, setCalcGuarantee] = React.useState<number>(8);
+  
+  // Weights for splitting service cost
+  const [calcMoSplit, setCalcMoSplit] = React.useState<number>(53);
+  const [calcStructureSplit, setCalcStructureSplit] = React.useState<number>(34);
+  const [calcTransportSplit, setCalcTransportSplit] = React.useState<number>(13);
+
+  React.useEffect(() => {
+    if (config) {
+      if (config.iva !== undefined) setCalcIva(Math.round(config.iva * 100));
+      if (config.guaranteePct !== undefined) setCalcGuarantee(Math.round(config.guaranteePct * 100));
+    }
+  }, [config]);
+
+  const simulationResult = React.useMemo(() => {
+    const totalInput = parseFloat(calcTotalInput) || 0;
+    if (totalInput <= 0) return null;
+
+    // 1. IVA
+    const ivaPct = calcIva / 100;
+    const subtotal = totalInput / (1 + ivaPct);
+    const ivaVal = totalInput - subtotal;
+
+    // 2. Margen (Markup)
+    const marginPct = calcMargin / 100;
+    const minWithoutMargin = subtotal / (1 + marginPct);
+    const marginVal = subtotal - minWithoutMargin;
+
+    // 3. Garantía
+    const guaranteePct = calcGuarantee / 100;
+    const costBeforeGuarantee = minWithoutMargin / (1 + guaranteePct);
+    const guaranteeVal = minWithoutMargin - costBeforeGuarantee;
+
+    // 4. Split Costo Servicio (MO, Estructura, Traslado)
+    const totalSplitWeights = calcMoSplit + calcStructureSplit + calcTransportSplit;
+    const moWeight = totalSplitWeights > 0 ? (calcMoSplit / totalSplitWeights) : 0;
+    const structureWeight = totalSplitWeights > 0 ? (calcStructureSplit / totalSplitWeights) : 0;
+    const transportWeight = totalSplitWeights > 0 ? (calcTransportSplit / totalSplitWeights) : 0;
+
+    const moVal = costBeforeGuarantee * moWeight;
+    const structureVal = costBeforeGuarantee * structureWeight;
+    const transportVal = costBeforeGuarantee * transportWeight;
+
+    return {
+      total: totalInput,
+      subtotal,
+      iva: ivaVal,
+      margin: marginVal,
+      minWithoutMargin,
+      guarantee: guaranteeVal,
+      costBeforeGuarantee,
+      mo: moVal,
+      structure: structureVal,
+      transport: transportVal
+    };
+  }, [calcTotalInput, calcMargin, calcIva, calcGuarantee, calcMoSplit, calcStructureSplit, calcTransportSplit]);
+
   // Chart variable selection
   const [barChartVariable, setBarChartVariable] = React.useState<'total' | 'aprobado' | 'profit'>('total');
   const [pieChartVariable, setPieChartVariable] = React.useState<'vertical' | 'status'>('vertical');
 
   // Widget visibility state
-  const [visibleWidgets, setVisibleWidgets] = React.useState({
+  const [visibleWidgets, setVisibleWidgets] = React.useState<Record<string, boolean>>({
+    total_facturado: true,
     facturado_con_iva: true,
     facturado_sin_iva: true,
+    presupuestos_cargados: true,
     presupuestos: true,
     aprobacion: true,
     clientes: true,
@@ -192,6 +268,13 @@ function Dashboard() {
     ganancia: true,
     gastos_estructura: true,
     gastos_mo: true,
+    presupuestos_enviados: true,
+    presupuestos_finalizados: true,
+    presupuestos_borradores: true,
+    presupuestos_rechazados: true,
+    presupuestos_ejecucion: true,
+    presupuestos_cobrados: true,
+    porcentaje_ganancia_neta: true,
     ventas_chart: true,
     verticales_chart: true,
     ordenes_recientes: true,
@@ -200,18 +283,30 @@ function Dashboard() {
 
   // Card slot assignments
   const [cardSlots, setCardSlots] = React.useState([
-    'facturado_con_iva', 'facturado_sin_iva', 'presupuestos', 'aprobacion', 
-    'clientes', 'iva', 'ganancia', 'gastos_estructura'
+    'total_facturado', 'facturado_con_iva', 'facturado_sin_iva', 'presupuestos_cargados', 
+    'presupuestos', 'aprobacion', 'clientes', 'iva', 'ganancia', 'porcentaje_ganancia_neta',
+    'presupuestos_borradores', 'presupuestos_enviados', 'presupuestos_ejecucion', 
+    'presupuestos_finalizados', 'presupuestos_cobrados', 'presupuestos_rechazados', 
+    'gastos_estructura'
   ]);
 
   const allMetrics = [
+    { id: 'total_facturado', label: 'Total Facturado', icon: Euro, color: 'green' },
     { id: 'facturado_con_iva', label: 'Total Facturado con IVA', icon: Euro, color: 'orange' },
     { id: 'facturado_sin_iva', label: 'Total Facturado sin IVA', icon: Euro, color: 'orange' },
-    { id: 'presupuestos', label: 'Presupuestos', icon: FileCheck, color: 'orange' },
+    { id: 'presupuestos_cargados', label: 'Presupuestos Cargados', icon: FileCheck, color: 'orange' },
+    { id: 'presupuestos', label: 'Presupuestos Aprobados', icon: FileCheck, color: 'orange' },
     { id: 'aprobacion', label: 'Tasa Aprobación', icon: TrendingUp, color: 'orange' },
     { id: 'clientes', label: 'Clientes Únicos', icon: Users, color: 'orange' },
     { id: 'iva', label: 'Total IVA', icon: Euro, color: 'blue' },
     { id: 'ganancia', label: 'Ganancia Neta', icon: TrendingUp, color: 'green' },
+    { id: 'porcentaje_ganancia_neta', label: 'Porcentaje Ganancia Neta', icon: TrendingUp, color: 'green' },
+    { id: 'presupuestos_borradores', label: 'Presupuestos Borrador', icon: FileCheck, color: 'neutral' },
+    { id: 'presupuestos_enviados', label: 'Presupuestos Enviados', icon: Clock, color: 'blue' },
+    { id: 'presupuestos_ejecucion', label: 'Presupuestos en Ejecución', icon: Wrench, color: 'orange' },
+    { id: 'presupuestos_finalizados', label: 'Presupuestos Finalizados', icon: CheckCircle2, color: 'green' },
+    { id: 'presupuestos_cobrados', label: 'Presupuestos Cobrados', icon: Euro, color: 'green' },
+    { id: 'presupuestos_rechazados', label: 'Presupuestos Rechazados', icon: AlertCircle, color: 'red' },
     { id: 'gastos_estructura', label: 'Gastos Estructura', icon: Wallet, color: 'amber' },
     { id: 'gastos_mo', label: 'Gastos Mano de Obra', icon: Users, color: 'neutral' },
     { id: 'gastos_totales', label: 'Gastos Totales', icon: TrendingDown, color: 'neutral' },
@@ -251,6 +346,64 @@ function Dashboard() {
   const filteredWorkOrders = React.useMemo(() => filterByPeriod(workOrders), [filterByPeriod, workOrders]);
   const filteredPayments = React.useMemo(() => filterByPeriod(payments), [filterByPeriod, payments]);
   const filteredExpenses = React.useMemo(() => filterByPeriod(expenses), [filterByPeriod, expenses]);
+
+  const budgetStatusCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {
+      borrador: 0,
+      enviado: 0,
+      aprobado: 0,
+      ejecucion: 0,
+      finalizado: 0,
+      cobrado: 0,
+      rechazado: 0
+    };
+    
+    filteredBudgets.forEach(b => {
+      const status = (b.status || 'borrador').toLowerCase();
+      if (counts[status] !== undefined) {
+        counts[status]++;
+      } else {
+        counts[status] = (counts[status] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  }, [filteredBudgets]);
+
+  const budgetStatusText = React.useMemo(() => {
+    const parts: string[] = [];
+    const statusNames: Record<string, string> = {
+      borrador: 'borrador',
+      enviado: 'enviados',
+      aprobado: 'aprobados',
+      ejecucion: 'en ejecución',
+      finalizado: 'en finalizado',
+      cobrado: 'cobrados',
+      rechazado: 'rechazados'
+    };
+
+    const displayOrder = ['aprobado', 'enviado', 'finalizado', 'borrador', 'ejecucion', 'cobrado', 'rechazado'];
+    
+    displayOrder.forEach(status => {
+      const count = budgetStatusCounts[status] || 0;
+      if (count > 0) {
+        parts.push(`${count} ${statusNames[status] || status}`);
+      }
+    });
+
+    if (parts.length === 0) return 'Sin presupuestos';
+    
+    let text = '';
+    if (parts.length === 1) {
+      text = parts[0];
+    } else if (parts.length === 2) {
+      text = `${parts[0]} y ${parts[1]}`;
+    } else {
+      text = `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;
+    }
+
+    return `De los cuales: ${text}`;
+  }, [budgetStatusCounts]);
 
   React.useEffect(() => {
     if (loading || !config) return;
@@ -296,7 +449,10 @@ function Dashboard() {
     setMetrics({
       totalFacturadoConIVA: totalRevenueConIVA,
       totalFacturadoSinIVA: totalRevenueSinIVA,
+      totalFacturado: totalRevenueConIVA + totalRevenueSinIVA,
       totalBudgets: filteredBudgets.length,
+      totalBudgetsAmount: filteredBudgets.reduce((acc, b) => acc + (Number(b.total || b.calculation?.total || 0)), 0),
+      approvedBudgetsCount: approvedBudgets.length,
       approvalRate: filteredBudgets.length > 0 ? (approvedBudgets.length / filteredBudgets.length) * 100 : 0,
       uniqueClients: new Set([...filteredBudgets.map(b => b.clientId), ...filteredPayments.map(p => p.clientId)]).size,
       totalIVA: totalCalculatedIVA,
@@ -309,17 +465,29 @@ function Dashboard() {
 
   const getMetricValue = (id: string) => {
     switch (id) {
-      case 'facturado_con_iva': return metrics.totalFacturadoConIVA.toLocaleString('de-DE') + ' €';
-      case 'facturado_sin_iva': return metrics.totalFacturadoSinIVA.toLocaleString('de-DE') + ' €';
-      case 'presupuestos': return metrics.totalBudgets.toString();
-      case 'aprobacion': return Math.round(metrics.approvalRate) + '%';
+      case 'total_facturado': return metrics.totalFacturado.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'facturado_con_iva': return metrics.totalFacturadoConIVA.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'facturado_sin_iva': return metrics.totalFacturadoSinIVA.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'presupuestos_cargados': return metrics.totalBudgets.toString();
+      case 'presupuestos': return metrics.approvedBudgetsCount.toString();
+      case 'aprobacion': return metrics.approvalRate.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
       case 'clientes': return metrics.uniqueClients.toString();
-      case 'iva': return metrics.totalIVA.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'ganancia': return metrics.netProfit.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'gastos_estructura': return metrics.structureExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'gastos_mo': return metrics.laborExpenses.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' €';
-      case 'gastos_totales': return metrics.totalExpenses.toLocaleString('de-DE') + ' €';
-      case 'margen_promedio': return metrics.totalFacturadoConIVA > 0 ? Math.round((metrics.netProfit / metrics.totalFacturadoConIVA) * 100) + '%' : '0%';
+      case 'iva': return metrics.totalIVA.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'ganancia': return metrics.netProfit.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_estructura': return metrics.structureExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_mo': return metrics.laborExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'gastos_totales': return metrics.totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      case 'margen_promedio': return (metrics.totalFacturadoConIVA > 0 ? (metrics.netProfit / metrics.totalFacturadoConIVA) * 100 : 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      case 'presupuestos_enviados': return (budgetStatusCounts.enviado || 0).toString();
+      case 'presupuestos_finalizados': return (budgetStatusCounts.finalizado || 0).toString();
+      case 'presupuestos_borradores': return (budgetStatusCounts.borrador || 0).toString();
+      case 'presupuestos_rechazados': return (budgetStatusCounts.rechazado || 0).toString();
+      case 'presupuestos_ejecucion': return (budgetStatusCounts.ejecucion || 0).toString();
+      case 'presupuestos_cobrados': return (budgetStatusCounts.cobrado || 0).toString();
+      case 'porcentaje_ganancia_neta': {
+        const pct = metrics.totalFacturado > 0 ? (metrics.netProfit / metrics.totalFacturado) * 100 : 0;
+        return pct.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      }
       default: return '0';
     }
   };
@@ -458,6 +626,14 @@ function Dashboard() {
           )}
 
           <button 
+            onClick={() => setIsCalculatorOpen(true)}
+            className="h-12 w-12 flex items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-kraken-orange transition-all"
+            title="Simulador de Presupuesto Invertido"
+          >
+            <Calculator size={20} />
+          </button>
+
+          <button 
             onClick={() => setIsCustomizing(true)}
             className="h-12 w-12 flex items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-kraken-orange transition-all"
             title="Personalizar Tablero"
@@ -537,8 +713,8 @@ function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cardSlots.slice(0, 4).map((metricId, index) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {cardSlots.map((metricId, index) => {
           const metric = allMetrics.find(m => m.id === metricId);
           if (!metric || !visibleWidgets[metricId as keyof typeof visibleWidgets]) return null;
           return (
@@ -549,23 +725,7 @@ function Dashboard() {
               icon={metric.icon} 
               trend={getMetricTrend(metricId)} 
               color={metric.color}
-            />
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cardSlots.slice(4, 8).map((metricId, index) => {
-          const metric = allMetrics.find(m => m.id === metricId);
-          if (!metric || !visibleWidgets[metricId as keyof typeof visibleWidgets]) return null;
-          return (
-            <StatCard 
-              key={`slot-${index + 4}`}
-              title={metric.label} 
-              value={getMetricValue(metricId)} 
-              icon={metric.icon} 
-              trend={getMetricTrend(metricId)} 
-              color={metric.color}
+              subtitle={metricId === 'presupuestos_cargados' ? budgetStatusText : undefined}
             />
           );
         })}
@@ -812,6 +972,229 @@ function Dashboard() {
                 className="w-full py-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-2xl font-bold hover:opacity-90 transition-all"
               >
                 Guardar Configuración
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simulator Modal */}
+      {isCalculatorOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-neutral-900 w-full max-w-3xl rounded-[32px] shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800 my-8">
+            <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-950">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-kraken-orange/10 text-kraken-orange rounded-xl">
+                  <Calculator size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight dark:text-white">Simulador de Presupuesto Invertido</h2>
+                  <p className="text-xs font-medium text-neutral-500">Desglosa un cobro total recibido en sus componentes operativos.</p>
+                </div>
+              </div>
+              <button onClick={() => setIsCalculatorOpen(false)} className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-full transition-colors dark:text-white">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto">
+              {/* Left Column: Inputs & Controls */}
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">Importe Total Cobrado (€)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-neutral-400">€</span>
+                    <input 
+                      type="number" 
+                      value={calcTotalInput}
+                      onChange={(e) => setCalcTotalInput(e.target.value)}
+                      placeholder="Ej: 1480"
+                      className="kraken-input w-full pl-10 pr-4 !h-14 text-lg font-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 space-y-4">
+                  <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Ajustes de Distribución</h4>
+                  
+                  {/* Margin Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">Margen de Ganancia</span>
+                      <span className="text-kraken-orange">{calcMargin}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={calcMargin}
+                      onChange={(e) => setCalcMargin(parseInt(e.target.value))}
+                      className="w-full accent-kraken-orange h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {/* IVA Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">IVA</span>
+                      <span className="text-blue-500">{calcIva}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="30" 
+                      value={calcIva}
+                      onChange={(e) => setCalcIva(parseInt(e.target.value))}
+                      className="w-full accent-blue-500 h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Guarantee Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">Garantía</span>
+                      <span className="text-amber-500">{calcGuarantee}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="20" 
+                      value={calcGuarantee}
+                      onChange={(e) => setCalcGuarantee(parseInt(e.target.value))}
+                      className="w-full accent-amber-500 h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 space-y-4">
+                  <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Peso Costos Operativos (Fórmula)</h4>
+                  
+                  {/* Labor Split */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">Mano de Obra</span>
+                      <span className="text-neutral-800 dark:text-neutral-200">{calcMoSplit}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="80" 
+                      value={calcMoSplit}
+                      onChange={(e) => setCalcMoSplit(parseInt(e.target.value))}
+                      className="w-full accent-neutral-800 dark:accent-neutral-200 h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Structure Split */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">Estructura</span>
+                      <span className="text-neutral-800 dark:text-neutral-200">{calcStructureSplit}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="80" 
+                      value={calcStructureSplit}
+                      onChange={(e) => setCalcStructureSplit(parseInt(e.target.value))}
+                      className="w-full accent-neutral-800 dark:accent-neutral-200 h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Transport Split */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">Traslado</span>
+                      <span className="text-neutral-800 dark:text-neutral-200">{calcTransportSplit}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="5" 
+                      max="50" 
+                      value={calcTransportSplit}
+                      onChange={(e) => setCalcTransportSplit(parseInt(e.target.value))}
+                      className="w-full accent-neutral-800 dark:accent-neutral-200 h-1.5 bg-neutral-100 dark:bg-neutral-850 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Breakdown & Charts */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 rounded-[24px] p-6 border border-neutral-150 dark:border-neutral-850 flex flex-col justify-between h-full">
+                <div>
+                  <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-4 uppercase tracking-wider">Resumen de Distribución</h3>
+                  
+                  {simulationResult ? (
+                    <div className="space-y-4">
+                      {/* Operational Costs */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500 font-medium">Mano de Obra</span>
+                          <span className="font-bold dark:text-white">{simulationResult.mo.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500 font-medium">Estructura</span>
+                          <span className="font-bold dark:text-white">{simulationResult.structure.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500 font-medium">Traslado</span>
+                          <span className="font-bold dark:text-white">{simulationResult.transport.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                        </div>
+                        <div className="flex justify-between text-xs border-b border-dashed border-neutral-200 dark:border-neutral-800 pb-2">
+                          <span className="text-neutral-500 font-medium">Garantía ({calcGuarantee}%)</span>
+                          <span className="font-bold dark:text-white">{simulationResult.guarantee.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                        </div>
+                      </div>
+
+                      {/* Min without margin */}
+                      <div className="flex justify-between text-xs font-bold border-b border-dashed border-neutral-200 dark:border-neutral-800 pb-2">
+                        <span className="text-neutral-500 uppercase tracking-wider">Mínimo sin Margen</span>
+                        <span className="dark:text-white">{simulationResult.minWithoutMargin.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                      </div>
+
+                      {/* Margin */}
+                      <div className="flex justify-between text-xs font-bold text-kraken-orange border-b border-dashed border-neutral-200 dark:border-neutral-800 pb-2">
+                        <span className="uppercase tracking-wider">Margen ({calcMargin}%)</span>
+                        <span>+{simulationResult.margin.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                      </div>
+
+                      {/* Subtotal */}
+                      <div className="flex justify-between text-xs font-bold border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                        <span className="text-neutral-500">Subtotal</span>
+                        <span className="dark:text-white">{simulationResult.subtotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                      </div>
+
+                      {/* IVA */}
+                      <div className="flex justify-between text-xs font-bold border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                        <span className="text-neutral-500">IVA ({calcIva}%)</span>
+                        <span className="dark:text-white">{simulationResult.iva.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                      </div>
+
+                      {/* Total General */}
+                      <div className="flex justify-between items-center bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 mt-4">
+                        <span className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">Total General</span>
+                        <span className="text-xl font-black text-kraken-orange">{simulationResult.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-48 flex items-center justify-center text-center text-neutral-400 text-xs">
+                      Ingresa un importe mayor a cero para ver el desglose simulado.
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-[10px] text-neutral-400 dark:text-neutral-500 italic mt-6 border-t border-neutral-100 dark:border-neutral-850 pt-4 leading-relaxed font-sans">
+                  * Cálculos simulados de forma invertida sobre la base de costos proporcionales. Los valores son estimativos para la distribución interna del dinero.
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800">
+              <button 
+                onClick={() => setIsCalculatorOpen(false)}
+                className="w-full py-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-2xl font-bold hover:opacity-90 transition-all"
+              >
+                Cerrar Simulador
               </button>
             </div>
           </div>
